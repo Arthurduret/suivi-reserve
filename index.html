@@ -698,16 +698,24 @@ function ouvrirBMS(d) {
   modalPending = { type: 'BMS', data: d };
   let missHTML = '';
   d.missions.forEach((m, i) => {
-    const jours = m.joursCalc || calcJours(m.deb, m.fin) || '?';
+    const joursAuto = m.joursCalc || calcJours(m.deb, m.fin) || '';
     missHTML += `
       <div style="background:var(--fond);border-radius:4px;padding:10px 12px;margin-bottom:8px">
-        <div style="font-size:11px;font-weight:700;color:var(--doux);margin-bottom:6px">
+        <div style="font-size:11px;font-weight:700;color:var(--kaki);margin-bottom:8px">
           MISSION ${i+1} — ${m.deb} → ${m.fin}
-          <span style="background:var(--kaki-pale);color:var(--kaki);padding:2px 8px;border-radius:10px;margin-left:8px">${jours} jour(s)</span>
         </div>
         <div class="frow">
-          <div class="fg"><label>Solde Base (€)</label><input type="number" id="f_solde_${i}" value="${m.solde||''}" step="0.01"></div>
+          <div class="fg">
+            <label>Jours effectués ✏️</label>
+            <input type="number" id="f_jours_${i}" value="${joursAuto}" min="1" max="365"
+              style="font-weight:700;font-size:16px;border-color:var(--kaki-light)">
+            <span style="font-size:11px;color:var(--doux);margin-top:2px">Calculé : ${joursAuto}j — corrigez si besoin</span>
+          </div>
+          <div class="fg"><label>Solde Base ENSAP (€)</label><input type="number" id="f_solde_${i}" value="${m.solde||''}" step="0.01"></div>
+        </div>
+        <div class="frow" style="margin-top:8px">
           <div class="fg"><label>ISAO (€)</label><input type="number" id="f_isao_${i}" value="${m.isao||''}" step="0.01"></div>
+          <div class="fg"></div>
         </div>
       </div>`;
   });
@@ -786,8 +794,13 @@ async function confirmModal() {
       rows[idx].bmsMois  = data.mois;
       rows[idx].bmsAnnee = data.annee;
       rows[idx].statut   = Math.max(rows[idx].statut||1, 3);
-      // Calcule joursReels depuis les dates si pas encore renseigné (pas de convoc ni ASF)
-      if (!rows[idx].joursReels && !rows[idx].joursTheo) {
+      // Jours saisis/validés par l'utilisateur dans la modal
+      const joursInput = parseInt(document.getElementById(`f_jours_${i}`)?.value) || null;
+      if (joursInput) {
+        // L'utilisateur a validé ce nombre — on écrase joursReels
+        rows[idx].joursReels = joursInput;
+      } else if (!rows[idx].joursReels && !rows[idx].joursTheo) {
+        // Fallback calcul automatique
         const j = calcJours(m.deb, m.fin);
         if (j) rows[idx].joursReels = j;
       }
