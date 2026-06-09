@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Réserve — Suivi des Activités</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://accounts.google.com/gsi/client"></script>
 <style>
   :root {
     --kaki:       #3D4A1F;
@@ -109,6 +111,14 @@
   .upload-zone .uz-title { font-size: 13px; font-weight: 700; color: var(--kaki); }
   .upload-zone .uz-sub   { font-size: 11px; color: var(--doux); margin-top: 4px; }
   .upload-zone input     { display: none; }
+  .upload-card { display: flex; flex-direction: column; gap: 6px; }
+  .btn-drive {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    background: white; border: 1px solid #DDD; border-radius: var(--r);
+    padding: 8px; font-size: 12px; font-weight: 600; color: #444;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-drive:hover { background: #F0F7FF; border-color: #4285F4; color: #4285F4; }
 
   /* DRIVE STATUS */
   .drive-status { font-size: 12px; margin-top: 10px; padding: 8px 12px; border-radius: 4px; }
@@ -278,23 +288,39 @@
     <div class="upload-wrap">
       <div class="section-title">📤 Importer un document PDF</div>
       <div class="upload-grid">
-        <div class="upload-zone" onclick="document.getElementById('fConv').click()" id="dzConv">
-          <div class="uz-icon">📋</div>
-          <div class="uz-title">Convocation</div>
-          <div class="uz-sub">Ordre de convocation</div>
-          <input type="file" id="fConv" accept=".pdf" onchange="onFile(this,'CONVOCATION')">
+        <!-- Zone upload avec double option : local OU Drive -->
+        <div class="upload-card">
+          <div class="upload-zone" onclick="document.getElementById('fConv').click()" id="dzConv">
+            <div class="uz-icon">📋</div>
+            <div class="uz-title">Convocation</div>
+            <div class="uz-sub">Depuis mon ordinateur</div>
+            <input type="file" id="fConv" accept=".pdf" onchange="onFile(this,'CONVOCATION')">
+          </div>
+          <button class="btn-drive" onclick="ouvrirPicker('CONVOCATION')">
+            <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png" width="16"> Depuis Drive
+          </button>
         </div>
-        <div class="upload-zone" onclick="document.getElementById('fASF').click()" id="dzASF">
-          <div class="uz-icon">✅</div>
-          <div class="uz-title">État de Service</div>
-          <div class="uz-sub">État nominatif des activités</div>
-          <input type="file" id="fASF" accept=".pdf" onchange="onFile(this,'ASF')">
+        <div class="upload-card">
+          <div class="upload-zone" onclick="document.getElementById('fASF').click()" id="dzASF">
+            <div class="uz-icon">✅</div>
+            <div class="uz-title">État de Service</div>
+            <div class="uz-sub">Depuis mon ordinateur</div>
+            <input type="file" id="fASF" accept=".pdf" onchange="onFile(this,'ASF')">
+          </div>
+          <button class="btn-drive" onclick="ouvrirPicker('ASF')">
+            <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png" width="16"> Depuis Drive
+          </button>
         </div>
-        <div class="upload-zone" onclick="document.getElementById('fBMS').click()" id="dzBMS">
-          <div class="uz-icon">💰</div>
-          <div class="uz-title">Bulletin de Solde</div>
-          <div class="uz-sub">BMS ENSAP mensuel</div>
-          <input type="file" id="fBMS" accept=".pdf" onchange="onFile(this,'BMS')">
+        <div class="upload-card">
+          <div class="upload-zone" onclick="document.getElementById('fBMS').click()" id="dzBMS">
+            <div class="uz-icon">💰</div>
+            <div class="uz-title">Bulletin de Solde</div>
+            <div class="uz-sub">Depuis mon ordinateur</div>
+            <input type="file" id="fBMS" accept=".pdf" onchange="onFile(this,'BMS')">
+          </div>
+          <button class="btn-drive" onclick="ouvrirPicker('BMS')">
+            <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png" width="16"> Depuis Drive
+          </button>
         </div>
       </div>
       <div id="driveStatus"></div>
@@ -358,7 +384,7 @@
 //  CONFIG
 // ════════════════════════════════════════════════════════════
 const CLIENT_ID   = '197968067540-baqvr87ns21eaijuk86kaesnjtkbeh4d.apps.googleusercontent.com';
-const SCOPES      = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
+const SCOPES      = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets';
 const SHEET_NAME  = 'Suivi Réserve — Données';
 const DRIVE_FOLDER= 'Suivi Réserve';
 
@@ -1112,6 +1138,59 @@ function moisNum(s) { const m={JANVIER:0,FEVRIER:1,FÉVRIER:1,MARS:2,AVRIL:3,MAI
 function showProc(t) { document.getElementById('procTxt').textContent=t; document.getElementById('proc').classList.add('show'); }
 function hideProc()  { document.getElementById('proc').classList.remove('show'); }
 function toast(msg, cls='tok') { const t=document.getElementById('toast'); t.textContent=msg; t.className=`toast ${cls} show`; setTimeout(()=>t.classList.remove('show'),3500); }
+
+// ════════════════════════════════════════════════════════
+//  GOOGLE PICKER — Sélecteur de fichiers Drive
+// ════════════════════════════════════════════════════════
+let pickerTypeEnCours = null;
+let pickerLoaded = false;
+
+function ouvrirPicker(type) {
+  pickerTypeEnCours = type;
+  if (!pickerLoaded) {
+    gapi.load('picker', () => { pickerLoaded = true; afficherPicker(); });
+  } else {
+    afficherPicker();
+  }
+}
+
+function afficherPicker() {
+  const picker = new google.picker.PickerBuilder()
+    .addView(new google.picker.DocsView()
+      .setIncludeFolders(true)
+      .setMimeTypes('application/pdf'))
+    .setOAuthToken(accessToken)
+    // .setDeveloperKey('') — non requis pour fichiers personnels avec OAuth
+    .setCallback(pickerCallback)
+    .setTitle('Choisir un PDF depuis Drive')
+    .build();
+  picker.setVisible(true);
+}
+
+async function pickerCallback(data) {
+  if (data.action !== google.picker.Action.PICKED) return;
+  const fileId = data.docs[0].id;
+  const fileName = data.docs[0].name;
+
+  showProc('Téléchargement depuis Drive : ' + fileName);
+  try {
+    // Télécharge le fichier depuis Drive
+    const resp = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      { headers: { Authorization: 'Bearer ' + accessToken } }
+    );
+    const blob = await resp.blob();
+    const file  = new File([blob], fileName, { type: 'application/pdf' });
+    hideProc();
+
+    // Traite comme un upload normal
+    const fakeInput = { files: [file], value: '' };
+    await onFile(fakeInput, pickerTypeEnCours);
+  } catch(e) {
+    hideProc();
+    toast('❌ Erreur téléchargement Drive : ' + e.message, 'terr');
+  }
+}
 
 // Drag & drop
 ['Conv','ASF','BMS'].forEach(id => {
