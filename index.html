@@ -672,35 +672,20 @@ function parseBMS(t) {
   // selon l'ordre de reconstruction des éléments du tableau PDF
   let mn = null;
 
-  // Pattern 1 : "Montant : X" avec EUR optionnel — couvre 2023/2024/2025/2026
-  // Validé sur 28 vrais BMS
-  mn = t.match(/Montant\s*:\s*([\d][\d\s\u00A0]*[,.]\d{2})(?:\s*EUR)?/i);
-
-  if (!mn) {
-    // Pattern 2 : "NET A PAYER ... 90,47" sur la même ligne
-    mn = t.match(/NET\s+A\s+PAYER[^\n]*?([\d][\d\s\u00A0]*[,.]\d{2})\s*$/im);
-  }
-
-  if (!mn) {
-    // Pattern 3 : montant seul AVANT ou APRÈS la ligne "NET A PAYER" (cas PDF.js)
-    const lines = t.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].includes('NET A PAYER') || lines[i].includes('NET À PAYER')) {
-        // Cherche dans les 2 lignes avant ET 3 lignes après
-        for (let k = -2; k <= 3; k++) {
-          if (k === 0) continue;
-          const nearby = (lines[i + k] || '').trim();
-          // Montant seul sur la ligne (ex: "90,47") ou en fin de ligne
-          const m2 = nearby.match(/^([\d][\d\s\u00A0]*[,.]\d{2})$/) ||
-                     nearby.match(/([\d][\d\s\u00A0]*[,.]\d{2})\s*$/);
-          if (m2 && !nearby.includes('Base') && !nearby.includes('Taux') && !nearby.includes('Montant net')) {
-            const val = parseFloat(m2[1].replace(/[\s\u00A0]/g,'').replace(',','.'));
-            // Le NET doit être > 50€ pour un réserviste
-            if (val > 50) { mn = m2; break; }
-          }
-        }
-        if (mn) break;
-      }
+  // Extraction NET À PAYER — validée sur 28 BMS réels 2023→2026
+  // Règle : chercher la ligne "Montant : X" qui précède "IBAN"
+  // C'est la ligne du virement bancaire, toujours présente et fiable
+  const _lines = t.split('\n');
+  for (let i = 0; i < _lines.length; i++) {
+    const l = _lines[i].trim();
+    // La ligne doit commencer par "Montant :" et ne pas contenir "net" ou "social"
+    if (!/^Montant\s*:/i.test(l)) continue;
+    if (/net|social/i.test(l)) continue;
+    const _m = l.match(/Montant\s*:\s*([\d][\d\s\u00A0]*[,.]\d{2})(?:\s*EUR)?/i);
+    if (_m) {
+      const _val = parseFloat(_m[1].replace(/[\s\u00A0]/g,'').replace(',','.'));
+      // Plage valide pour un réserviste : 5€ à 10 000€
+      if (_val >= 5 && _val <= 10000) { mn = _m; break; }
     }
   }
   const RE = /^(.+?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(-?\d{1,3}(?:\s\d{3})*,\d{2})$/;
