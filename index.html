@@ -376,8 +376,8 @@ let bmsState     = {};  // bmsState[annee] = liste des BMS reçus { mois, annee,
 let anneeActive  = new Date().getFullYear();
 let modalPending = null;
 
-function getRows(y) { return state[y]?.rows || []; }
-function setRows(y, rows) { if (!state[y]) state[y] = {}; state[y].rows = rows; }
+function getRows(y) { const s = state[y]; if (!s) return []; return Array.isArray(s) ? s : (s.rows || []); }
+function setRows(y, rows) { if (!state[y] || Array.isArray(state[y])) state[y] = {}; state[y].rows = rows; }
 function getBMS(y)  { return bmsState[y] || []; }
 function addBMS(y, bms) { if (!bmsState[y]) bmsState[y] = []; const idx = bmsState[y].findIndex(b => b.mois === bms.mois && b.annee === bms.annee); if (idx !== -1) bmsState[y][idx] = bms; else bmsState[y].push(bms); }
 
@@ -488,52 +488,97 @@ async function getOrCreateSheet() {
 async function chargerDepuisSheets() {
   if (!sheetId) return;
   try {
-    const r = await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Données!A1:Z1000`);
-    if (!r.values || r.values.length < 2) return;
-    const headers = r.values[0];
-    state = {};
-    r.values.slice(1).forEach(row => {
-      const obj = {};
-      headers.forEach((h, i) => obj[h] = row[i] || '');
-      const annee = parseInt(obj.deb?.split('/')[2]) || anneeActive;
-      if (!state[annee]) state[annee] = [];
-      // Reconvertit les types
-      obj.joursTheo  = obj.joursTheo  ? parseInt(obj.joursTheo)   : null;
-      obj.joursReels = obj.joursReels ? parseInt(obj.joursReels)  : null;
-      obj.solde  = parseFloat(obj.solde)  || 0;
-      obj.isao   = parseFloat(obj.isao)   || 0;
-      obj.alloc  = parseFloat(obj.alloc)  || 0;
-      obj.net    = parseFloat(obj.net)    || 0;
-      obj.statut = parseInt(obj.statut)   || 1;
-      obj.id     = obj.id || Date.now() + Math.random();
-      state[annee].push(obj);
-    });
+    // ── Charger lignes missions ────────────────────────────
+    const r = await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Données!A1:Z2000`);
+    if (r.values && r.values.length >= 2) {
+      const headers = r.values[0];
+      state = {};
+      r.values.slice(1).forEach(row => {
+        if (!row.some(c => c)) return; // ligne vide
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = row[i] || '');
+        const annee = parseInt(obj.deb?.split('/')[2]) || anneeActive;
+        if (!state[annee]) state[annee] = { rows: [] };
+        if (!state[annee].rows) state[annee].rows = [];
+        obj.joursTheo  = obj.joursTheo  ? parseInt(obj.joursTheo)  : null;
+        obj.joursReels = obj.joursReels ? parseInt(obj.joursReels) : null;
+        obj.solde      = parseFloat(obj.solde)  || 0;
+        obj.isao       = parseFloat(obj.isao)   || 0;
+        obj.statut     = parseInt(obj.statut)   || 1;
+        obj.id         = obj.id || Date.now() + Math.random();
+        state[annee].rows.push(obj);
+      });
+    }
+
+    // ── Charger BMS ───────────────────────────────────────
+    try {
+      const rb = await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/BMS!A1:Z1000`);
+      if (rb.values && rb.values.length >= 2) {
+        const bmsHeaders = rb.values[0];
+        bmsState = {};
+        rb.values.slice(1).forEach(row => {
+          if (!row.some(c => c)) return;
+          const obj = {};
+          bmsHeaders.forEach((h, i) => obj[h] = row[i] || '');
+          const annee = parseInt(obj.annee) || anneeActive;
+          if (!bmsState[annee]) bmsState[annee] = [];
+          obj.net   = parseFloat(obj.net)   || 0;
+          obj.alloc = parseFloat(obj.alloc) || 0;
+          obj.annee = annee;
+          bmsState[annee].push(obj);
+        });
+      }
+    } catch(e) { console.log('BMS sheet non trouvé, normal au premier run'); }
+
   } catch(e) { console.log('Sheets lecture:', e); }
 }
 
 async function sauvegarderSheets() {
-  if (!sheetId) return;
-  const headers = ['id','mission','deb','fin','joursTheo','joursReels','dateValid','ecart','statut','solde','isao','alloc','net','code','ref'];
+  if (!sheetId) {
+    // Fallback localStorage si pas connecté
+    localStorage.setItem('reserveData', JSON.stringify(state));
+    localStorage.setItem('reserveBMS',  JSON.stringify(bmsState));
+    return;
+  }
+
+  // ── Onglet Données (lignes missions) ──────────────────────
+  const headers = ['id','mission','deb','fin','joursTheo','joursReels','dateValid','ecart','statut','solde','isao','bmsMois','bmsAnnee','code','ref'];
   const rows = [headers];
-  Object.values(state).flat().forEach(l => {
-    rows.push(headers.map(h => l[h] ?? ''));
+  Object.entries(state).forEach(([annee, anneeData]) => {
+    const lignes = anneeData?.rows || anneeData || [];
+    lignes.forEach(l => rows.push(headers.map(h => l[h] ?? '')));
   });
-  // Assure que l'onglet "Données" existe
-  try {
-    await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Données!A1:Z1000:clear`, { method: 'POST' });
-  } catch(e) {
-    // Crée l'onglet si nécessaire
-    await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
-      method : 'POST',
+
+  // ── Onglet BMS (bulletins de solde) ───────────────────────
+  const bmsCols = ['mois','annee','net','alloc'];
+  const bmsRows = [bmsCols];
+  Object.values(bmsState).flat().forEach(b => {
+    bmsRows.push(bmsCols.map(h => b[h] ?? ''));
+  });
+
+  // Créer les onglets si nécessaire + écrire
+  for (const [titre, data] of [['Données', rows], ['BMS', bmsRows]]) {
+    try {
+      await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(titre)}!A1:Z2000:clear`, { method: 'POST' });
+    } catch(e) {
+      try {
+        await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
+          method : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body   : JSON.stringify({ requests: [{ addSheet: { properties: { title: titre } } }] })
+        });
+      } catch(e2) {}
+    }
+    await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(titre)}!A1?valueInputOption=RAW`, {
+      method : 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body   : JSON.stringify({ requests: [{ addSheet: { properties: { title: 'Données' } } }] })
+      body   : JSON.stringify({ values: data })
     });
   }
-  await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Données!A1?valueInputOption=RAW`, {
-    method : 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body   : JSON.stringify({ values: rows })
-  });
+
+  // Backup localStorage aussi
+  localStorage.setItem('reserveData', JSON.stringify(state));
+  localStorage.setItem('reserveBMS',  JSON.stringify(bmsState));
 }
 
 async function gFetch(url, opts = {}) {
@@ -596,7 +641,26 @@ function parseASF(t) {
 function parseBMS(t) {
   const mm = t.match(/BULLETIN\s+MENSUEL\s+DE\s+SOLDE\s*:\s*([A-ZÉÛÀa-zéûà]+)/i);
   const ma = t.match(/[Pp][ée]riode\s+du\s+\d{2}\/\d{2}\/(\d{4})/);
-  const mn = t.match(/Montant\s*:\s*([\d\s]+,\d{2})\s*EUR/);
+  // Plusieurs patterns pour couvrir les variations PDF.js vs pdfplumber
+  // Pattern 1 : "Montant : 90,47 EUR" (standard)
+  // Pattern 2 : "NET A PAYER AVANT IMPOT SUR LE REVENU 90,47" (direct)
+  // Pattern 3 : Montant seul sur une ligne après NET A PAYER
+  let mn = t.match(/Montant\s*:\s*([\d][\d\s\u00A0]*[,.]\d{2})\s*EUR/i);
+  if (!mn) mn = t.match(/NET\s+A\s+PAYER[^\n]*?([\d][\d\s\u00A0]*[,.]\d{2})\s*$/im);
+  if (!mn) {
+    // Cherche le montant sur la ligne juste après "NET A PAYER"
+    const lines = t.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes('NET A PAYER') || lines[i].includes('NET À PAYER')) {
+        for (let k = 1; k <= 3; k++) {
+          const next = (lines[i+k] || '').trim();
+          const m2 = next.match(/^([\d][\d\s\u00A0]*[,.]\d{2})$/);
+          if (m2) { mn = m2; break; }
+        }
+        if (mn) break;
+      }
+    }
+  }
   const RE = /^(.+?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(-?\d{1,3}(?:\s\d{3})*,\d{2})$/;
   const missions = {}; let alloc = 0;
   t.split('\n').forEach(ligne => {
@@ -724,7 +788,13 @@ function ouvrirBMS(d) {
   document.getElementById('mFields').innerHTML  = missHTML + `
     <div class="frow">
       <div class="fg"><label>Allocation Études (€)</label><input type="number" id="f_alloc" value="${d.alloc||''}" step="0.01"></div>
-      <div class="fg"><label>NET À PAYER BMS (€)</label><input type="number" id="f_net" value="${d.net||''}" step="0.01"></div>
+      <div class="fg">
+        <label>NET À PAYER BMS (€) — ce qui est viré sur votre compte</label>
+        <input type="number" id="f_net" value="${d.net||''}" step="0.01"
+          style="font-weight:800;font-size:16px;border-color:var(--vert);border-width:2px"
+          placeholder="Ex: 90.47">
+        ${d.net ? '<span style="font-size:11px;color:var(--vert);margin-top:2px">✅ Détecté automatiquement — vérifiez</span>' : '<span style="font-size:11px;color:var(--orange);margin-top:2px">⚠️ Non détecté — saisissez manuellement</span>'}
+      </div>
     </div>`;
   document.getElementById('overlay').classList.add('show');
 }
@@ -938,10 +1008,21 @@ function renderKPI() {
     : etudBrut > 0 && etudNet === 0
       ? eur(etudBrut) + ' brut'
       : eur(etudNet) + ' net + ' + eur(etudBrut) + ' brut';
-  document.getElementById('kEtud').textContent    = etudNet > 0 ? eur(etudNet) : eur(etudBrut);
+  // Affichage prime étudiante : toujours en NET quand possible
+  // 100€ brut → 90,47€ net (CSG/CRDS)
+  const TAUX_NET_PRIME = 0.9047; // taux net constaté sur les BMS
+  const nbMoisAlloc = bms.filter(b => b.alloc > 0).length;
+  const etudNetCalc = nbMoisAlloc > 0 && etudNet === 0
+    ? bms.filter(b => b.alloc > 0 && getBMS(anneeActive).find(x => x.mois===b.mois)?.net > 0
+        && getRows(anneeActive).filter(l => l.bmsMois===b.mois).every(l => !l.solde && !l.isao))
+        .reduce((s,b) => s + (b.net||0), 0)
+    : etudNet;
+  document.getElementById('kEtud').textContent    = eur(etudNetCalc || etudNet || etudBrut);
   document.getElementById('kEtudSub').textContent = etudNet > 0
-    ? `Net réel (${eur(etudNet)}/mois)`
-    : `Brut avant cotisations`;
+    ? `Net réel · ${nbMoisAlloc} mois`
+    : etudBrut > 0
+      ? `≈${eur(etudBrut * TAUX_NET_PRIME)} net estimé`
+      : `0 mois`;
 }
 
 function renderTableau() {
@@ -1062,7 +1143,8 @@ async function init() {
     }
   } else {
     // Fallback local si pas connecté
-    try { state = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
+    try { state    = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
+    try { bmsState = JSON.parse(localStorage.getItem('reserveBMS') ||'{}'); } catch(e) {}
     document.getElementById('appContent').style.display = 'flex';
   }
 
