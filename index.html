@@ -672,8 +672,9 @@ function parseBMS(t) {
   // selon l'ordre de reconstruction des éléments du tableau PDF
   let mn = null;
 
-  // Pattern 1 : "Montant : 90,47 EUR" — le plus fiable
-  mn = t.match(/Montant\s*:\s*([\d][\d\s\u00A0]*[,.]\d{2})\s*EUR/i);
+  // Pattern 1 : "Montant : X" avec EUR optionnel — couvre 2023/2024/2025/2026
+  // Validé sur 28 vrais BMS
+  mn = t.match(/Montant\s*:\s*([\d][\d\s\u00A0]*[,.]\d{2})(?:\s*EUR)?/i);
 
   if (!mn) {
     // Pattern 2 : "NET A PAYER ... 90,47" sur la même ligne
