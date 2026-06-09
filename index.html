@@ -346,7 +346,7 @@
         </table>
       </div>
       <div style="padding:12px 20px;background:var(--or-pale);border-top:1px solid var(--bord);font-size:12px;color:#7A5800">
-        ⚠️ L'allocation d'études (100€/mois brut) est soumise à cotisations — le net réellement perçu est inférieur. Il est inclus dans le NET À PAYER total.
+        ℹ️ Prime étudiante : 100€ brut/mois → 90,47€ net/mois (après cotisations CSG/CRDS). Pour les mois sans mission soldée, le NET À PAYER affiché correspond au net réel de la prime.
       </div>
     </div>
 
@@ -607,7 +607,12 @@ function parseBMS(t) {
     else if (lib.includes('ISAO'))                           { if (!missions[key]) missions[key]={deb:d1,fin:d2,solde:0,isao:0}; missions[key].isao  += val; }
     else if (lib.includes('Allocation') && lib.includes('tudes')) { alloc += val; }
   });
-  return { mois: mm?mm[1].toUpperCase():'', annee: ma?parseInt(ma[1]):new Date().getFullYear(), net: mn?parseFloat(mn[1].replace(/\s/g,'').replace(',','.')):0, alloc, missions: Object.values(missions) };
+  // Calcule les jours pour chaque mission depuis les dates
+  const missionsAvecJours = Object.values(missions).map(m => {
+    const j = calcJours(m.deb, m.fin);
+    return { ...m, joursCalc: j };
+  });
+  return { mois: mm?mm[1].toUpperCase():'', annee: ma?parseInt(ma[1]):new Date().getFullYear(), net: mn?parseFloat(mn[1].replace(/\s/g,'').replace(',','.')):0, alloc, missions: missionsAvecJours };
 }
 
 // ════════════════════════════════════════════════════════════
@@ -693,9 +698,13 @@ function ouvrirBMS(d) {
   modalPending = { type: 'BMS', data: d };
   let missHTML = '';
   d.missions.forEach((m, i) => {
+    const jours = m.joursCalc || calcJours(m.deb, m.fin) || '?';
     missHTML += `
       <div style="background:var(--fond);border-radius:4px;padding:10px 12px;margin-bottom:8px">
-        <div style="font-size:11px;font-weight:700;color:var(--doux);margin-bottom:6px">MISSION ${i+1} — ${m.deb} → ${m.fin}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--doux);margin-bottom:6px">
+          MISSION ${i+1} — ${m.deb} → ${m.fin}
+          <span style="background:var(--kaki-pale);color:var(--kaki);padding:2px 8px;border-radius:10px;margin-left:8px">${jours} jour(s)</span>
+        </div>
         <div class="frow">
           <div class="fg"><label>Solde Base (€)</label><input type="number" id="f_solde_${i}" value="${m.solde||''}" step="0.01"></div>
           <div class="fg"><label>ISAO (€)</label><input type="number" id="f_isao_${i}" value="${m.isao||''}" step="0.01"></div>
@@ -777,6 +786,11 @@ async function confirmModal() {
       rows[idx].bmsMois  = data.mois;
       rows[idx].bmsAnnee = data.annee;
       rows[idx].statut   = Math.max(rows[idx].statut||1, 3);
+      // Calcule joursReels depuis les dates si pas encore renseigné (pas de convoc ni ASF)
+      if (!rows[idx].joursReels && !rows[idx].joursTheo) {
+        const j = calcJours(m.deb, m.fin);
+        if (j) rows[idx].joursReels = j;
+      }
       setRows(annee, rows);
     });
 
@@ -881,11 +895,34 @@ function renderKPI() {
   document.getElementById('kPercu').textContent = eur(percu);
   document.getElementById('kAtt').textContent   = eur(att);
 
-  // Prime étudiante = somme des alloc dans les BMS (brut, soumis à cotisations)
-  // On affiche le brut et on précise que c'est avant cotisations
-  const etudBrut = bms.reduce((s,b) => s + (b.alloc||0), 0);
-  document.getElementById('kEtud').textContent    = eur(etudBrut) + ' brut';
-  document.getElementById('kEtudSub').textContent = `Sept ${anneeActive-1} → Août ${anneeActive} (avant cotis.)`;
+  // Prime étudiante :
+  // - Mois avec UNIQUEMENT l'alloc (pas de mission soldée) → NET BMS = net réel de la prime
+  // - Mois avec missions + alloc → on ne peut pas isoler la prime nette du NET global
+  let etudNet = 0;
+  let etudBrut = 0;
+  const rows2 = getRows(anneeActive);
+  bms.forEach(b => {
+    if (!b.alloc) return;
+    // Est-ce un mois avec uniquement l'alloc ? (pas de mission liée à ce BMS)
+    const missionsLiees = rows2.filter(l => l.bmsMois === b.mois && l.bmsAnnee === b.annee && (l.solde > 0 || l.isao > 0));
+    if (missionsLiees.length === 0) {
+      // NET BMS = net réel de la prime ce mois
+      etudNet += (b.net || 0);
+    } else {
+      // Impossible d'isoler — on affiche le brut
+      etudBrut += b.alloc;
+    }
+  });
+  const etudAffiche = etudNet + etudBrut;
+  const etudLabel   = etudNet > 0 && etudBrut === 0
+    ? eur(etudNet) + ' net'
+    : etudBrut > 0 && etudNet === 0
+      ? eur(etudBrut) + ' brut'
+      : eur(etudNet) + ' net + ' + eur(etudBrut) + ' brut';
+  document.getElementById('kEtud').textContent    = etudNet > 0 ? eur(etudNet) : eur(etudBrut);
+  document.getElementById('kEtudSub').textContent = etudNet > 0
+    ? `Net réel (${eur(etudNet)}/mois)`
+    : `Brut avant cotisations`;
 }
 
 function renderTableau() {
@@ -944,6 +981,13 @@ async function delRow(annee, idx) {
 //  UTILS
 // ════════════════════════════════════════════════════════════
 function findIdx(rows, deb, fin) { return rows.findIndex(r => r.deb===deb && r.fin===fin); }
+
+// Calcule le nombre de jours entre deux dates FR (dd/mm/yyyy) incluses
+function calcJours(deb, fin) {
+  if (!deb || !fin) return null;
+  const diff = ts(fin) - ts(deb);
+  return Math.round(diff / 86400000) + 1;
+}
 function fi(fr) { if(!fr||!fr.includes('/'))return''; const[d,m,y]=fr.split('/'); return `${y}-${m}-${d}`; }
 function if2(inp) { if(!inp)return''; const[y,m,d]=inp.split('-'); return `${d}/${m}/${y}`; }
 function ts(fr) { if(!fr)return 0; const[d,m,y]=fr.split('/'); return new Date(y,m-1,d).getTime(); }
