@@ -641,21 +641,36 @@ function parseASF(t) {
 function parseBMS(t) {
   const mm = t.match(/BULLETIN\s+MENSUEL\s+DE\s+SOLDE\s*:\s*([A-ZÉÛÀa-zéûà]+)/i);
   const ma = t.match(/[Pp][ée]riode\s+du\s+\d{2}\/\d{2}\/(\d{4})/);
-  // Plusieurs patterns pour couvrir les variations PDF.js vs pdfplumber
-  // Pattern 1 : "Montant : 90,47 EUR" (standard)
-  // Pattern 2 : "NET A PAYER AVANT IMPOT SUR LE REVENU 90,47" (direct)
-  // Pattern 3 : Montant seul sur une ligne après NET A PAYER
-  let mn = t.match(/Montant\s*:\s*([\d][\d\s\u00A0]*[,.]\d{2})\s*EUR/i);
-  if (!mn) mn = t.match(/NET\s+A\s+PAYER[^\n]*?([\d][\d\s\u00A0]*[,.]\d{2})\s*$/im);
+  // Stratégie robuste pour extraire le NET À PAYER
+  // PDF.js peut placer le montant AVANT ou APRÈS la ligne "NET A PAYER"
+  // selon l'ordre de reconstruction des éléments du tableau PDF
+  let mn = null;
+
+  // Pattern 1 : "Montant : 90,47 EUR" — le plus fiable
+  mn = t.match(/Montant\s*:\s*([\d][\d\s\u00A0]*[,.]\d{2})\s*EUR/i);
+
   if (!mn) {
-    // Cherche le montant sur la ligne juste après "NET A PAYER"
+    // Pattern 2 : "NET A PAYER ... 90,47" sur la même ligne
+    mn = t.match(/NET\s+A\s+PAYER[^\n]*?([\d][\d\s\u00A0]*[,.]\d{2})\s*$/im);
+  }
+
+  if (!mn) {
+    // Pattern 3 : montant seul AVANT ou APRÈS la ligne "NET A PAYER" (cas PDF.js)
     const lines = t.split('\n');
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].includes('NET A PAYER') || lines[i].includes('NET À PAYER')) {
-        for (let k = 1; k <= 3; k++) {
-          const next = (lines[i+k] || '').trim();
-          const m2 = next.match(/^([\d][\d\s\u00A0]*[,.]\d{2})$/);
-          if (m2) { mn = m2; break; }
+        // Cherche dans les 2 lignes avant ET 3 lignes après
+        for (let k = -2; k <= 3; k++) {
+          if (k === 0) continue;
+          const nearby = (lines[i + k] || '').trim();
+          // Montant seul sur la ligne (ex: "90,47") ou en fin de ligne
+          const m2 = nearby.match(/^([\d][\d\s\u00A0]*[,.]\d{2})$/) ||
+                     nearby.match(/([\d][\d\s\u00A0]*[,.]\d{2})\s*$/);
+          if (m2 && !nearby.includes('Base') && !nearby.includes('Taux') && !nearby.includes('Montant net')) {
+            const val = parseFloat(m2[1].replace(/[\s\u00A0]/g,'').replace(',','.'));
+            // Le NET doit être > 50€ pour un réserviste
+            if (val > 50) { mn = m2; break; }
+          }
         }
         if (mn) break;
       }
