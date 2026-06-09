@@ -312,8 +312,8 @@
             <tr>
               <th>Mission</th><th>Début</th><th>Fin</th>
               <th>J.Théo</th><th>J.Réels</th><th>Écart</th>
-              <th>Statut</th><th>Solde ENSAP</th><th>ISAO</th>
-              <th>Alloc.Études</th><th>NET BMS</th><th>Vérif. Paye</th><th></th>
+              <th>Statut</th><th>Solde Brute ENSAP</th><th>ISAO Brut</th>
+              <th>BMS lié</th><th>Vérif. Paye</th><th></th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -323,6 +323,30 @@
           <div class="empty-title">Aucune activité pour cette année</div>
           <div>Importez vos PDFs ou ajoutez une ligne manuellement.</div>
         </div>
+      </div>
+    </div>
+
+    <!-- SECTION BMS REÇUS -->
+    <div class="table-wrap-outer" id="bmsSectionWrap" style="display:none">
+      <div class="table-hdr">
+        <h2>💰 Bulletins de Solde reçus <span id="anneeLabel2" style="color:var(--doux);font-weight:400;font-size:13px"></span></h2>
+        <span style="font-size:12px;color:var(--doux)">NET À PAYER = ce qui est viré sur votre compte</span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Mois BMS</th>
+              <th>NET À PAYER (viré)</th>
+              <th>dont Alloc. Études (brut)</th>
+              <th>Missions couvertes</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyBMS"></tbody>
+        </table>
+      </div>
+      <div style="padding:12px 20px;background:var(--or-pale);border-top:1px solid var(--bord);font-size:12px;color:#7A5800">
+        ⚠️ L'allocation d'études (100€/mois brut) est soumise à cotisations — le net réellement perçu est inférieur. Il est inclus dans le NET À PAYER total.
       </div>
     </div>
 
@@ -347,12 +371,15 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 let accessToken  = null;
 let sheetId      = null;
 let driveFolderId= null;
-let state        = {};
+let state        = {};  // state[annee].rows = lignes missions
+let bmsState     = {};  // bmsState[annee] = liste des BMS reçus { mois, annee, net, alloc }
 let anneeActive  = new Date().getFullYear();
 let modalPending = null;
 
-function getRows(y) { return state[y] || []; }
-function setRows(y, rows) { state[y] = rows; }
+function getRows(y) { return state[y]?.rows || []; }
+function setRows(y, rows) { if (!state[y]) state[y] = {}; state[y].rows = rows; }
+function getBMS(y)  { return bmsState[y] || []; }
+function addBMS(y, bms) { if (!bmsState[y]) bmsState[y] = []; const idx = bmsState[y].findIndex(b => b.mois === bms.mois && b.annee === bms.annee); if (idx !== -1) bmsState[y][idx] = bms; else bmsState[y].push(bms); }
 
 // ════════════════════════════════════════════════════════════
 //  AUTH GOOGLE
@@ -728,24 +755,32 @@ async function confirmModal() {
   } else if (type === 'BMS') {
     const alloc = parseFloat(document.getElementById('f_alloc').value) || 0;
     const net   = parseFloat(document.getElementById('f_net').value)   || 0;
+
+    // NET + alloc → stockés dans bmsState (1 entrée par BMS mensuel)
+    // Le NET BMS est le total net du mois entier, PAS divisé par mission
+    addBMS(data.annee, { mois: data.mois, annee: data.annee, net, alloc });
+
+    // Sur chaque ligne mission → uniquement solde brute ENSAP + ISAO
     data.missions.forEach((m, i) => {
       const solde = parseFloat(document.getElementById(`f_solde_${i}`).value) || 0;
       const isao  = parseFloat(document.getElementById(`f_isao_${i}`).value)  || 0;
       const annee = parseInt(m.deb.split('/')[2]);
       const rows  = getRows(annee);
       let   idx   = findIdx(rows, m.deb, m.fin);
-      if (idx === -1) { rows.push({ id: Date.now(), mission:'', deb:m.deb, fin:m.fin, joursTheo:null, joursReels:null, dateValid:'', ecart:'⚠️ BMS sans convoc', statut:1, code:'', ref:'', solde:0, isao:0, alloc:0, net:0 }); rows.sort((a,b)=>ts(a.deb)-ts(b.deb)); idx = findIdx(rows, m.deb, m.fin); }
-      rows[idx].solde  += solde; rows[idx].isao += isao; rows[idx].alloc = alloc; rows[idx].net = net; rows[idx].statut = Math.max(rows[idx].statut||1, 3);
+      if (idx === -1) {
+        rows.push({ id: Date.now(), mission:'', deb:m.deb, fin:m.fin, joursTheo:null, joursReels:null, dateValid:'', ecart:'⚠️ BMS sans convoc', statut:1, code:'', ref:'', solde:0, isao:0, bmsMois:data.mois, bmsAnnee:data.annee });
+        rows.sort((a,b)=>ts(a.deb)-ts(b.deb));
+        idx = findIdx(rows, m.deb, m.fin);
+      }
+      rows[idx].solde   += solde;
+      rows[idx].isao    += isao;
+      rows[idx].bmsMois  = data.mois;
+      rows[idx].bmsAnnee = data.annee;
+      rows[idx].statut   = Math.max(rows[idx].statut||1, 3);
       setRows(annee, rows);
     });
-    // BMS sans mission
-    if (data.missions.length === 0 && alloc > 0) {
-      const rows = getRows(data.annee);
-      const m0   = String(moisNum(data.mois)+1).padStart(2,'0');
-      rows.push({ id: Date.now(), mission:`Alloc études ${data.mois}`, deb:`01/${m0}/${data.annee}`, fin:`28/${m0}/${data.annee}`, joursTheo:null, joursReels:null, dateValid:'', ecart:'', statut:3, code:'', ref:'', solde:0, isao:0, alloc, net });
-      setRows(data.annee, rows);
-      anneeActive = data.annee;
-    }
+
+    anneeActive = data.annee;
   }
 
   closeModal();
@@ -777,7 +812,7 @@ function ajouterManuel() {
 // ════════════════════════════════════════════════════════════
 //  RENDU
 // ════════════════════════════════════════════════════════════
-function rafraichir() { renderAnnees(); renderKPI(); renderTableau(); }
+function rafraichir() { renderAnnees(); renderKPI(); renderTableau(); renderBMS(); }
 
 function renderAnnees() {
   const cur   = new Date().getFullYear();
@@ -791,8 +826,38 @@ function renderAnnees() {
 
 function changerAnnee(a) { anneeActive = a; rafraichir(); }
 
+function renderBMS() {
+  const bms   = getBMS(anneeActive);
+  const rows  = getRows(anneeActive);
+  const wrap  = document.getElementById('bmsSectionWrap');
+  const tbody = document.getElementById('tbodyBMS');
+
+  document.getElementById('anneeLabel2').textContent = '— ' + anneeActive;
+
+  if (!bms.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+
+  tbody.innerHTML = bms.map(b => {
+    // Missions couvertes par ce BMS
+    const missions = rows
+      .filter(l => l.bmsMois === b.mois && l.bmsAnnee === b.annee)
+      .map(l => (l.mission || l.deb + '→' + l.fin))
+      .join(', ') || '—';
+
+    return `<tr>
+      <td style="font-weight:700">${b.mois} ${b.annee}</td>
+      <td class="td-mont" style="font-size:16px;font-weight:800;color:var(--vert)">${eur(b.net)}</td>
+      <td class="td-mont">${b.alloc ? eur(b.alloc) + ' <span style="font-size:10px;color:var(--doux)">(brut)</span>' : '—'}</td>
+      <td style="font-size:12px;color:var(--doux)">${missions}</td>
+    </tr>`;
+  }).join('');
+}
+
 function renderKPI() {
   const rows  = getRows(anneeActive);
+  const bms   = getBMS(anneeActive);
+
+  // Jours effectués : jours réels si ASF reçu, sinon théoriques
   const jours = rows.reduce((s,l) => s + (l.joursReels || l.joursTheo || 0), 0);
   const pct   = Math.min(jours/37*100, 100);
   document.getElementById('kJours').textContent  = jours;
@@ -803,13 +868,24 @@ function renderKPI() {
   document.getElementById('kFidBadge').innerHTML = jours>=37
     ? '<span class="badge b-ok">🟢 ÉLIGIBLE</span>'
     : `<span class="badge b-warn">${37-jours}j restants</span>`;
-  let percu=0, att=0;
-  rows.forEach(l => { if(l.statut>=3) percu+=(l.net||0)+(l.alloc||0); else att+=((l.joursReels||l.joursTheo||0)*60.385); });
-  document.getElementById('kPercu').textContent  = eur(percu);
-  document.getElementById('kAtt').textContent    = eur(att);
-  const etud = rows.reduce((s,l) => s+(l.alloc||0), 0);
-  document.getElementById('kEtud').textContent   = eur(etud);
-  document.getElementById('kEtudSub').textContent= `Sept ${anneeActive-1} → Août ${anneeActive}`;
+
+  // Total perçu = somme des NET À PAYER de chaque BMS reçu
+  // (le NET BMS inclut déjà toutes les cotisations déduites)
+  const percu = bms.reduce((s,b) => s + (b.net||0), 0);
+
+  // En attente = missions sans BMS associé (estimation brute)
+  const att = rows
+    .filter(l => !l.bmsMois && l.statut < 3)
+    .reduce((s,l) => s + ((l.joursReels||l.joursTheo||0) * 60.385), 0);
+
+  document.getElementById('kPercu').textContent = eur(percu);
+  document.getElementById('kAtt').textContent   = eur(att);
+
+  // Prime étudiante = somme des alloc dans les BMS (brut, soumis à cotisations)
+  // On affiche le brut et on précise que c'est avant cotisations
+  const etudBrut = bms.reduce((s,b) => s + (b.alloc||0), 0);
+  document.getElementById('kEtud').textContent    = eur(etudBrut) + ' brut';
+  document.getElementById('kEtudSub').textContent = `Sept ${anneeActive-1} → Août ${anneeActive} (avant cotis.)`;
 }
 
 function renderTableau() {
@@ -823,13 +899,16 @@ function renderTableau() {
   tbody.innerHTML = rows.map((l,i) => {
     const st = Math.min(l.statut||1, 3);
     const ec = l.ecart?.startsWith('⚠️')||l.ecart?.startsWith('🔴') ? 'warn' : l.ecart?.startsWith('✅') ? 'ok' : l.ecart?.startsWith('ℹ️') ? 'warn' : 'muted';
+    // Vérif paye : on compare solde brute ENSAP avec ce qu'on attendait
+    // Le NET BMS global du mois est affiché séparément dans la section BMS
+    const bmsLigne = l.bmsMois ? getBMS(parseInt(l.deb?.split('/')[2])).find(b => b.mois===l.bmsMois) : null;
     let vp = '<span class="muted">—</span>';
-    if (l.net>0 && l.joursReels) {
-      const att = l.joursReels*60.385;
-      vp = Math.abs(l.net-att)<20
-        ? `<span class="ok">✅ ${eur(l.net)}</span>`
-        : `<span class="warn">⚠️ BMS=${eur(l.net)} / Att≈${eur(att)}</span>`;
-    } else if (l.net>0) vp = `<span class="ok">💰 ${eur(l.net)}</span>`;
+    if (l.solde > 0 || l.isao > 0) {
+      const brutTotal = (l.solde||0) + (l.isao||0);
+      vp = bmsLigne
+        ? `<span class="ok">✅ Brut=${eur(brutTotal)} | NET BMS=${eur(bmsLigne.net)}</span>`
+        : `<span class="warn">⏳ Brut=${eur(brutTotal)} (BMS non reçu)</span>`;
+    }
     return `<tr>
       <td class="td-mission"><input type="text" value="${esc(l.mission||'')}" placeholder="— nommer —" onchange="majMission(${anneeActive},${i},this.value)" title="${esc(l.ref||'')}"></td>
       <td class="td-date">${l.deb||'—'}</td><td class="td-date">${l.fin||'—'}</td>
@@ -839,8 +918,7 @@ function renderTableau() {
       <td><span class="statut ${sC[st]}">${sL[st]}</span></td>
       <td class="td-mont">${l.solde?eur(l.solde):'—'}</td>
       <td class="td-mont">${l.isao ?eur(l.isao) :'—'}</td>
-      <td class="td-mont">${l.alloc?eur(l.alloc):'—'}</td>
-      <td class="td-mont">${l.net  ?eur(l.net)  :'—'}</td>
+      <td class="td-date">${l.bmsMois ? l.bmsMois+' '+l.bmsAnnee : '<span class=\'muted\'>—</span>'}</td>
       <td>${vp}</td>
       <td><button class="btn-sm btn-del" onclick="delRow(${anneeActive},${i})">✕</button></td>
     </tr>`;
