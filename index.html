@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Réserve — Suivi des Activités</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root {
+    --kaki:       #3D4A1F;
+    --kaki-mid:   #5A6B2A;
+    --kaki-light: #8A9E4A;
+    --kaki-pale:  #F0F2E8;
+    --or:         #C8A84B;
+    --or-pale:    #FBF5E0;
+    --blanc:      #FFFFFF;
+    --fond:       #F5F5F3;
+    --bord:       #DDD;
+    --texte:      #1A1A1A;
+    --doux:       #666;
+    --vert:       #2D7A3A;
+    --vert-pale:  #E8F5EA;
+    --rouge:      #C0392B;
+    --rouge-pale: #FDECEA;
+    --orange:     #D4780A;
+    --ora-pale:   #FEF3E2;
+    --bleu:       #1A5C8A;
+    --bleu-pale:  #E8F2FB;
+    --r:          6px;
+    --ombre:      0 2px 12px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--fond); color: var(--texte); min-height: 100vh; }
+
+  /* HEADER */
+  header {
+    background: var(--kaki); color: white; padding: 0 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 60px; position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .h-left { display: flex; align-items: center; gap: 12px; }
+  .h-logo { font-size: 22px; }
+  .h-title { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; }
+  .h-sub   { font-size: 11px; opacity: 0.7; margin-top: 1px; }
+  .h-right { display: flex; align-items: center; gap: 10px; }
+
+  /* BOUTON GOOGLE */
+  .btn-google {
+    display: flex; align-items: center; gap: 8px;
+    background: white; color: #333; border: none;
+    padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 600;
+    cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    transition: box-shadow 0.2s;
+  }
+  .btn-google:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .btn-google img { width: 18px; height: 18px; }
+  .user-info { display: flex; align-items: center; gap: 8px; color: white; font-size: 13px; }
+  .user-avatar { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.4); }
+  .btn-deconnect { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+
+  /* ANNEES */
+  .annees { display: flex; gap: 6px; }
+  .btn-annee { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 4px 12px; border-radius: 20px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+  .btn-annee.active, .btn-annee:hover { background: var(--or); border-color: var(--or); color: var(--kaki); font-weight: 700; }
+
+  /* MAIN */
+  main { max-width: 1400px; margin: 0 auto; padding: 24px 20px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* BANNER CONNEXION */
+  .banner-connect {
+    background: linear-gradient(135deg, var(--kaki), var(--kaki-mid));
+    color: white; border-radius: var(--r); padding: 32px;
+    text-align: center;
+  }
+  .banner-connect h2 { font-size: 22px; margin-bottom: 8px; }
+  .banner-connect p  { opacity: 0.8; margin-bottom: 20px; font-size: 14px; }
+
+  /* KPI */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+  .kpi { background: var(--blanc); border-radius: var(--r); padding: 18px 20px; box-shadow: var(--ombre); border-left: 4px solid var(--kaki-light); }
+  .kpi.kf { border-left-color: var(--or); }
+  .kpi.ko { border-left-color: var(--vert); }
+  .kpi.ka { border-left-color: var(--orange); }
+  .kpi.ke { border-left-color: var(--bleu); }
+  .kpi-label { font-size: 11px; font-weight: 600; color: var(--doux); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .kpi-val   { font-size: 28px; font-weight: 800; color: var(--kaki); line-height: 1; }
+  .kpi-sub   { font-size: 12px; color: var(--doux); margin-top: 4px; }
+  .badge { display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .b-ok  { background: var(--vert-pale);  color: var(--vert); }
+  .b-warn{ background: var(--ora-pale);   color: var(--orange); }
+
+  /* BARRE FIDERES */
+  .fideres-wrap { background: var(--blanc); border-radius: var(--r); padding: 16px 20px; box-shadow: var(--ombre); }
+  .fideres-hdr  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .fideres-hdr span { font-size: 13px; font-weight: 700; color: var(--kaki); }
+  .fideres-count{ font-size: 13px; color: var(--doux); }
+  .fideres-track{ height: 12px; background: var(--fond); border-radius: 6px; overflow: hidden; }
+  .fideres-fill { height: 100%; border-radius: 6px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); background: linear-gradient(90deg, var(--kaki-mid), var(--kaki-light)); }
+  .fideres-fill.done { background: linear-gradient(90deg, var(--vert), #4CAF50); }
+
+  /* UPLOAD */
+  .upload-wrap { background: var(--blanc); border-radius: var(--r); box-shadow: var(--ombre); padding: 20px; }
+  .section-title { font-size: 14px; font-weight: 700; color: var(--kaki); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .upload-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .upload-zone { border: 2px dashed var(--bord); border-radius: var(--r); padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--fond); }
+  .upload-zone:hover, .upload-zone.over { border-color: var(--kaki-light); background: var(--kaki-pale); }
+  .upload-zone .uz-icon  { font-size: 28px; margin-bottom: 8px; }
+  .upload-zone .uz-title { font-size: 13px; font-weight: 700; color: var(--kaki); }
+  .upload-zone .uz-sub   { font-size: 11px; color: var(--doux); margin-top: 4px; }
+  .upload-zone input     { display: none; }
+
+  /* DRIVE STATUS */
+  .drive-status { font-size: 12px; margin-top: 10px; padding: 8px 12px; border-radius: 4px; }
+  .ds-ok   { background: var(--vert-pale); color: var(--vert); }
+  .ds-warn { background: var(--ora-pale);  color: var(--orange); }
+
+  /* MODAL */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+  .overlay.show { display: flex; }
+  .modal { background: var(--blanc); border-radius: 10px; padding: 28px; max-width: 560px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
+  .modal h3 { font-size: 17px; font-weight: 800; color: var(--kaki); margin-bottom: 6px; }
+  .modal-sub { font-size: 12px; color: var(--doux); margin-bottom: 20px; }
+  .fields { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+  .fg { display: flex; flex-direction: column; gap: 4px; }
+  .fg label { font-size: 11px; font-weight: 700; color: var(--doux); text-transform: uppercase; letter-spacing: 0.5px; }
+  .fg input, .fg select { border: 1px solid var(--bord); border-radius: var(--r); padding: 8px 12px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+  .fg input:focus { border-color: var(--kaki-light); }
+  .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .btn  { padding: 10px 20px; border-radius: var(--r); font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+  .btn-p { background: var(--kaki);  color: white; }
+  .btn-p:hover { background: var(--kaki-mid); }
+  .btn-s { background: var(--fond); color: var(--texte); border: 1px solid var(--bord); }
+  .btn-s:hover { background: var(--bord); }
+
+  /* TABLE */
+  .table-wrap-outer { background: var(--blanc); border-radius: var(--r); box-shadow: var(--ombre); overflow: hidden; }
+  .table-hdr { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--bord); }
+  .table-hdr h2 { font-size: 14px; font-weight: 700; color: var(--kaki); }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--kaki); color: white; }
+  thead th { padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--fond); transition: background 0.15s; }
+  tbody tr:hover { background: var(--kaki-pale); }
+  tbody td { padding: 10px 14px; vertical-align: middle; }
+  .td-mission input { border: none; background: transparent; font-weight: 600; font-size: 13px; width: 100%; color: var(--texte); outline: none; cursor: pointer; min-width: 120px; }
+  .td-mission input:focus { background: var(--kaki-pale); border-radius: 3px; padding: 2px 4px; }
+  .td-date  { white-space: nowrap; color: var(--doux); font-size: 12px; }
+  .td-jours { text-align: center; font-weight: 700; }
+  .td-mont  { text-align: right; font-family: monospace; }
+  .statut   { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .s1 { background: #E8E8E8; color: #555; }
+  .s2 { background: var(--bleu-pale); color: var(--bleu); }
+  .s3 { background: var(--vert-pale); color: var(--vert); }
+  .ok   { color: var(--vert);   font-size: 12px; }
+  .warn { color: var(--orange); font-size: 12px; font-weight: 700; }
+  .err  { color: var(--rouge);  font-size: 12px; font-weight: 700; }
+  .muted{ color: var(--doux);   font-size: 11px; }
+  .btn-sm  { padding: 4px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; border: none; font-weight: 600; }
+  .btn-del { background: var(--rouge-pale); color: var(--rouge); }
+
+  /* EMPTY */
+  .empty { padding: 48px 20px; text-align: center; color: var(--doux); }
+  .empty-icon  { font-size: 40px; margin-bottom: 12px; }
+  .empty-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--kaki); color: white; padding: 14px 20px; border-radius: var(--r); font-size: 14px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.2); transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 300; max-width: 340px; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.tok  { background: var(--vert); }
+  .toast.terr { background: var(--rouge); }
+
+  /* PROC OVERLAY */
+  .proc { display: none; position: fixed; inset: 0; background: rgba(61,74,31,0.88); z-index: 250; align-items: center; justify-content: center; flex-direction: column; color: white; gap: 16px; }
+  .proc.show { display: flex; }
+  .proc-text { font-size: 16px; font-weight: 600; }
+  .spin-lg { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.3); border-top-color: var(--or); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- PROCESSING -->
+<div class="proc" id="proc"><div class="spin-lg"></div><div class="proc-text" id="procTxt">Chargement…</div></div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3 id="mTitle">Confirmer</h3>
+    <div class="modal-sub" id="mSub"></div>
+    <div class="fields" id="mFields"></div>
+    <div class="actions">
+      <button class="btn btn-s" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-p" onclick="confirmModal()">✅ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="h-left">
+    <span class="h-logo">🎖️</span>
+    <div>
+      <div class="h-title">RÉSERVE OPÉRATIONNELLE</div>
+      <div class="h-sub">Suivi des activités & paiements</div>
+    </div>
+  </div>
+  <div class="h-right">
+    <div class="annees" id="annees"></div>
+    <div id="authArea">
+      <button class="btn-google" onclick="signIn()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
+        Connecter Google Drive
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- BANNER NON CONNECTÉ -->
+  <div class="banner-connect" id="bannerConnect">
+    <h2>🔐 Connectez votre Google Drive</h2>
+    <p>Vos documents sont sauvegardés sur votre Drive personnel.<br>Vos données ne transitent par aucun serveur externe.</p>
+    <button class="btn-google" onclick="signIn()" style="margin:0 auto">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
+      Se connecter avec Google
+    </button>
+  </div>
+
+  <!-- CONTENU (masqué avant connexion) -->
+  <div id="appContent" style="display:none;flex-direction:column;gap:20px">
+
+    <!-- KPI -->
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">Jours effectués</div>
+        <div class="kpi-val" id="kJours">0</div>
+        <div class="kpi-sub">année en cours</div>
+      </div>
+      <div class="kpi kf">
+        <div class="kpi-label">Prime FIDERES</div>
+        <div class="kpi-val" id="kFidVal">0/37</div>
+        <div id="kFidBadge"></div>
+      </div>
+      <div class="kpi ko">
+        <div class="kpi-label">Total perçu</div>
+        <div class="kpi-val" id="kPercu">0 €</div>
+        <div class="kpi-sub">missions payées</div>
+      </div>
+      <div class="kpi ka">
+        <div class="kpi-label">En attente</div>
+        <div class="kpi-val" id="kAtt">0 €</div>
+        <div class="kpi-sub">solde non payée</div>
+      </div>
+      <div class="kpi ke">
+        <div class="kpi-label">Prime étudiante</div>
+        <div class="kpi-val" id="kEtud">0 €</div>
+        <div class="kpi-sub" id="kEtudSub"></div>
+      </div>
+    </div>
+
+    <!-- FIDERES -->
+    <div class="fideres-wrap">
+      <div class="fideres-hdr">
+        <span>🎯 Progression FIDERES</span>
+        <span class="fideres-count" id="fCount">0 / 37 jours</span>
+      </div>
+      <div class="fideres-track"><div class="fideres-fill" id="fFill" style="width:0%"></div></div>
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="upload-wrap">
+      <div class="section-title">📤 Importer un document PDF</div>
+      <div class="upload-grid">
+        <div class="upload-zone" onclick="document.getElementById('fConv').click()" id="dzConv">
+          <div class="uz-icon">📋</div>
+          <div class="uz-title">Convocation</div>
+          <div class="uz-sub">Ordre de convocation</div>
+          <input type="file" id="fConv" accept=".pdf" onchange="onFile(this,'CONVOCATION')">
+        </div>
+        <div class="upload-zone" onclick="document.getElementById('fASF').click()" id="dzASF">
+          <div class="uz-icon">✅</div>
+          <div class="uz-title">État de Service</div>
+          <div class="uz-sub">État nominatif des activités</div>
+          <input type="file" id="fASF" accept=".pdf" onchange="onFile(this,'ASF')">
+        </div>
+        <div class="upload-zone" onclick="document.getElementById('fBMS').click()" id="dzBMS">
+          <div class="uz-icon">💰</div>
+          <div class="uz-title">Bulletin de Solde</div>
+          <div class="uz-sub">BMS ENSAP mensuel</div>
+          <input type="file" id="fBMS" accept=".pdf" onchange="onFile(this,'BMS')">
+        </div>
+      </div>
+      <div id="driveStatus"></div>
+    </div>
+
+    <!-- TABLEAU -->
+    <div class="table-wrap-outer">
+      <div class="table-hdr">
+        <h2>📅 Activités <span id="anneeLabel" style="color:var(--doux);font-weight:400;font-size:13px"></span></h2>
+        <button class="btn btn-s btn-sm" onclick="ajouterManuel()" style="font-size:12px;padding:6px 12px">+ Ajouter</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Mission</th><th>Début</th><th>Fin</th>
+              <th>J.Théo</th><th>J.Réels</th><th>Écart</th>
+              <th>Statut</th><th>Solde ENSAP</th><th>ISAO</th>
+              <th>Alloc.Études</th><th>NET BMS</th><th>Vérif. Paye</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="empty" id="emptyState" style="display:none">
+          <div class="empty-icon">🪖</div>
+          <div class="empty-title">Aucune activité pour cette année</div>
+          <div>Importez vos PDFs ou ajoutez une ligne manuellement.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /appContent -->
+</main>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════════════════
+const CLIENT_ID   = '197968067540-baqvr87ns21eaijuk86kaesnjtkbeh4d.apps.googleusercontent.com';
+const SCOPES      = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
+const SHEET_NAME  = 'Suivi Réserve — Données';
+const DRIVE_FOLDER= 'Suivi Réserve';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ════════════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════════════
+let accessToken  = null;
+let sheetId      = null;
+let driveFolderId= null;
+let state        = {};
+let anneeActive  = new Date().getFullYear();
+let modalPending = null;
+
+function getRows(y) { return state[y] || []; }
+function setRows(y, rows) { state[y] = rows; }
+
+// ════════════════════════════════════════════════════════════
+//  AUTH GOOGLE
+// ════════════════════════════════════════════════════════════
+function signIn() {
+  const params = new URLSearchParams({
+    client_id    : CLIENT_ID,
+    redirect_uri : window.location.origin + window.location.pathname,
+    response_type: 'token',
+    scope        : SCOPES,
+    prompt       : 'select_account'
+  });
+  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+}
+
+function signOut() {
+  accessToken = null;
+  localStorage.removeItem('gat');
+  localStorage.removeItem('gat_exp');
+  location.reload();
+}
+
+function checkAuth() {
+  // Récupère le token depuis l'URL (retour OAuth)
+  const hash = window.location.hash.substring(1);
+  if (hash.includes('access_token')) {
+    const p = new URLSearchParams(hash);
+    accessToken = p.get('access_token');
+    const exp = Date.now() + parseInt(p.get('expires_in') || 3600) * 1000;
+    localStorage.setItem('gat', accessToken);
+    localStorage.setItem('gat_exp', exp);
+    window.history.replaceState({}, '', window.location.pathname);
+  } else {
+    const saved = localStorage.getItem('gat');
+    const exp   = parseInt(localStorage.getItem('gat_exp') || '0');
+    if (saved && Date.now() < exp) accessToken = saved;
+  }
+  return !!accessToken;
+}
+
+async function getUserInfo() {
+  const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: 'Bearer ' + accessToken }
+  });
+  return r.json();
+}
+
+// ════════════════════════════════════════════════════════════
+//  GOOGLE DRIVE — Sauvegarde des PDFs
+// ════════════════════════════════════════════════════════════
+async function getOrCreateFolder() {
+  // Cherche le dossier existant
+  const q = encodeURIComponent(`name='${DRIVE_FOLDER}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const r = await gFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  if (r.files && r.files.length > 0) { driveFolderId = r.files[0].id; return; }
+  // Crée le dossier
+  const cr = await gFetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: DRIVE_FOLDER, mimeType: 'application/vnd.google-apps.folder' })
+  });
+  driveFolderId = cr.id;
+}
+
+async function uploaderPDFDrive(file) {
+  if (!driveFolderId) await getOrCreateFolder();
+  const meta = JSON.stringify({ name: file.name, parents: [driveFolderId] });
+  const form = new FormData();
+  form.append('metadata', new Blob([meta], { type: 'application/json' }));
+  form.append('file', file);
+  const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method : 'POST',
+    headers: { Authorization: 'Bearer ' + accessToken },
+    body   : form
+  });
+  const data = await r.json();
+  return data.id;
+}
+
+// ════════════════════════════════════════════════════════════
+//  GOOGLE SHEETS — Persistance des données
+// ════════════════════════════════════════════════════════════
+async function getOrCreateSheet() {
+  const saved = localStorage.getItem('sheetId');
+  if (saved) { sheetId = saved; return; }
+
+  // Cherche une feuille existante
+  const q = encodeURIComponent(`name='${SHEET_NAME}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`);
+  const r = await gFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  if (r.files && r.files.length > 0) {
+    sheetId = r.files[0].id;
+    localStorage.setItem('sheetId', sheetId);
+    return;
+  }
+
+  // Crée la feuille
+  const cr = await gFetch('https://www.googleapis.com/drive/v3/files', {
+    method : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body   : JSON.stringify({ name: SHEET_NAME, mimeType: 'application/vnd.google-apps.spreadsheet' })
+  });
+  sheetId = cr.id;
+  localStorage.setItem('sheetId', sheetId);
+}
+
+async function chargerDepuisSheets() {
+  if (!sheetId) return;
+  try {
+    const r = await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Données!A1:Z1000`);
+    if (!r.values || r.values.length < 2) return;
+    const headers = r.values[0];
+    state = {};
+    r.values.slice(1).forEach(row => {
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = row[i] || '');
+      const annee = parseInt(obj.deb?.split('/')[2]) || anneeActive;
+      if (!state[annee]) state[annee] = [];
+      // Reconvertit les types
+      obj.joursTheo  = obj.joursTheo  ? parseInt(obj.joursTheo)   : null;
+      obj.joursReels = obj.joursReels ? parseInt(obj.joursReels)  : null;
+      obj.solde  = parseFloat(obj.solde)  || 0;
+      obj.isao   = parseFloat(obj.isao)   || 0;
+      obj.alloc  = parseFloat(obj.alloc)  || 0;
+      obj.net    = parseFloat(obj.net)    || 0;
+      obj.statut = parseInt(obj.statut)   || 1;
+      obj.id     = obj.id || Date.now() + Math.random();
+      state[annee].push(obj);
+    });
+  } catch(e) { console.log('Sheets lecture:', e); }
+}
+
+async function sauvegarderSheets() {
+  if (!sheetId) return;
+  const headers = ['id','mission','deb','fin','joursTheo','joursReels','dateValid','ecart','statut','solde','isao','alloc','net','code','ref'];
+  const rows = [headers];
+  Object.values(state).flat().forEach(l => {
+    rows.push(headers.map(h => l[h] ?? ''));
+  });
+  // Assure que l'onglet "Données" existe
+  try {
+    await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Données!A1:Z1000:clear`, { method: 'POST' });
+  } catch(e) {
+    // Crée l'onglet si nécessaire
+    await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({ requests: [{ addSheet: { properties: { title: 'Données' } } }] })
+    });
+  }
+  await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Données!A1?valueInputOption=RAW`, {
+    method : 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body   : JSON.stringify({ values: rows })
+  });
+}
+
+async function gFetch(url, opts = {}) {
+  const r = await fetch(url, {
+    ...opts,
+    headers: { Authorization: 'Bearer ' + accessToken, ...(opts.headers || {}) }
+  });
+  if (!r.ok) { const e = await r.json(); throw new Error(JSON.stringify(e)); }
+  return r.json();
+}
+
+// ════════════════════════════════════════════════════════════
+//  PDF PARSING
+// ════════════════════════════════════════════════════════════
+async function extraireTexte(file) {
+  const buf  = await file.arrayBuffer();
+  const pdf  = await pdfjsLib.getDocument({ data: buf }).promise;
+  let texte  = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page  = await pdf.getPage(i);
+    const items = await page.getTextContent();
+    const byY   = {};
+    items.items.forEach(it => {
+      const y = Math.round(it.transform[5]);
+      if (!byY[y]) byY[y] = [];
+      byY[y].push({ x: it.transform[4], t: it.str });
+    });
+    Object.keys(byY).sort((a,b) => b-a).forEach(y => {
+      const ligne = byY[y].sort((a,b) => a.x - b.x).map(i => i.t).join(' ').trim();
+      if (ligne) texte += ligne + '\n';
+    });
+  }
+  return texte;
+}
+
+function detectType(t) {
+  if (t.includes('BULLETIN MENSUEL DE SOLDE') || t.includes('NET A PAYER')) return 'BMS';
+  if ((t.includes('ETAT NOMINATIF') || t.includes('ÉTAT NOMINATIF')) && t.includes('solder')) return 'ASF';
+  if (t.includes('ORDRE DE CONVOCATION') || (t.includes('RESERVE OPERATIONNELLE') && t.includes('convoqu'))) return 'CONVOCATION';
+  return 'INCONNU';
+}
+
+function parseConv(t) {
+  const m = t.match(/convoqu[ée]\s+du\s+(\d{2}\/\d{2}\/\d{4})(?:[^0-9]*\d{2}:\d{2})?\s+au\s+(\d{2}\/\d{2}\/\d{4})/i);
+  if (!m) return null;
+  const md = t.match(/dur[ée]e\s+de\s+(\d+)\s+jours?/i);
+  const mr = t.match(/Réf\s*:\s*([^\n\r]+)/i);
+  const mc = t.match(/Code Activit[ée]\s*:\s*([^\n\r]+)/i);
+  return { deb: m[1], fin: m[2], joursTheo: md ? parseInt(md[1]) : null, ref: mr ? mr[1].trim() : '', code: mc ? mc[1].trim().substring(0,60) : '' };
+}
+
+function parseASF(t) {
+  const m = t.match(/Du\s+(\d{2}\/\d{2}\/\d{4})\s+au\s+(\d{2}\/\d{2}\/\d{4})/i);
+  if (!m) return null;
+  const mj = t.match(/jours\s+[àa]\s+solder\s*:\s*(\d+)/i);
+  const mg = t.match(/Document\s+g[ée]n[ée]r[ée]\s+le\s+(\d{2}\/\d{2}\/\d{4})/i);
+  return { deb: m[1], fin: m[2], joursReels: mj ? parseInt(mj[1]) : null, dateValid: mg ? mg[1] : '' };
+}
+
+function parseBMS(t) {
+  const mm = t.match(/BULLETIN\s+MENSUEL\s+DE\s+SOLDE\s*:\s*([A-ZÉÛÀa-zéûà]+)/i);
+  const ma = t.match(/[Pp][ée]riode\s+du\s+\d{2}\/\d{2}\/(\d{4})/);
+  const mn = t.match(/Montant\s*:\s*([\d\s]+,\d{2})\s*EUR/);
+  const RE = /^(.+?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(-?\d{1,3}(?:\s\d{3})*,\d{2})$/;
+  const missions = {}; let alloc = 0;
+  t.split('\n').forEach(ligne => {
+    const l = ligne.trim(); const m = RE.exec(l); if (!m) return;
+    const lib = m[1], d1 = m[2], d2 = m[3], val = parseFloat(m[4].replace(/\s/g,'').replace(',','.'));
+    const key = d1+'|'+d2;
+    if (lib.includes('Solde de base'))                       { if (!missions[key]) missions[key]={deb:d1,fin:d2,solde:0,isao:0}; missions[key].solde += val; }
+    else if (lib.includes('ISAO'))                           { if (!missions[key]) missions[key]={deb:d1,fin:d2,solde:0,isao:0}; missions[key].isao  += val; }
+    else if (lib.includes('Allocation') && lib.includes('tudes')) { alloc += val; }
+  });
+  return { mois: mm?mm[1].toUpperCase():'', annee: ma?parseInt(ma[1]):new Date().getFullYear(), net: mn?parseFloat(mn[1].replace(/\s/g,'').replace(',','.')):0, alloc, missions: Object.values(missions) };
+}
+
+// ════════════════════════════════════════════════════════════
+//  UPLOAD HANDLER
+// ════════════════════════════════════════════════════════════
+async function onFile(input, typeHint) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  showProc('Lecture du PDF…');
+  try {
+    const texte = await extraireTexte(file);
+    const type  = detectType(texte);
+    hideProc();
+
+    if (type === 'INCONNU') { toast('❓ Document non reconnu', 'terr'); return; }
+
+    // Upload Drive en parallèle (silencieux)
+    if (accessToken) {
+      showProc('Sauvegarde sur Drive…');
+      try { await uploaderPDFDrive(file); } catch(e) { console.warn('Drive upload:', e); }
+      hideProc();
+      toast('📁 PDF sauvegardé sur Drive', 'tok');
+    }
+
+    if      (type === 'CONVOCATION') ouvrirConv(parseConv(texte));
+    else if (type === 'ASF')         ouvrirASF(parseASF(texte));
+    else if (type === 'BMS')         ouvrirBMS(parseBMS(texte));
+
+  } catch(e) { hideProc(); toast('❌ Erreur: ' + e.message, 'terr'); }
+}
+
+// ════════════════════════════════════════════════════════════
+//  MODALS
+// ════════════════════════════════════════════════════════════
+function ouvrirConv(d) {
+  if (!d) { toast('❌ Données convocation introuvables', 'terr'); return; }
+  modalPending = { type: 'CONV', data: d };
+  document.getElementById('mTitle').textContent = '📋 Convocation détectée';
+  document.getElementById('mSub').textContent   = 'Vérifiez et corrigez si nécessaire avant d\'enregistrer.';
+  document.getElementById('mFields').innerHTML  = `
+    <div class="fg"><label>Nom de la mission (optionnel)</label><input id="f_mission" type="text" placeholder="Ex: Stage CFIM Fréjus"></div>
+    <div class="frow">
+      <div class="fg"><label>Date début</label><input id="f_deb" type="date" value="${fi(d.deb)}"></div>
+      <div class="fg"><label>Date fin</label><input id="f_fin" type="date" value="${fi(d.fin)}"></div>
+    </div>
+    <div class="fg"><label>Jours théoriques</label><input id="f_jtheo" type="number" value="${d.joursTheo||''}" min="1"></div>
+    <div class="fg"><label>Code activité</label><input id="f_code" type="text" value="${esc(d.code)}"></div>
+    <div class="fg"><label>Référence OM</label><input id="f_ref" type="text" value="${esc(d.ref)}"></div>
+  `;
+  document.getElementById('overlay').classList.add('show');
+}
+
+function ouvrirASF(d) {
+  if (!d) { toast('❌ Données ASF introuvables', 'terr'); return; }
+  const annee = parseInt(d.deb.split('/')[2]);
+  const rows  = getRows(annee);
+  const idx   = findIdx(rows, d.deb, d.fin);
+  const jt    = idx !== -1 ? rows[idx].joursTheo : null;
+  const diff  = jt && d.joursReels !== null ? d.joursReels - jt : null;
+  let alertHTML = '';
+  if (diff !== null) {
+    if (diff < 0)      alertHTML = `<div style="margin-top:6px;padding:4px 10px;background:var(--ora-pale);color:var(--orange);border-radius:4px;font-size:12px;font-weight:700;display:inline-block">⚠️ ${jt}j convoc vs ${d.joursReels}j ASF (${diff}j)</div>`;
+    else if (diff > 0) alertHTML = `<div style="margin-top:6px;padding:4px 10px;background:var(--bleu-pale);color:var(--bleu);border-radius:4px;font-size:12px;display:inline-block">ℹ️ ${jt}j convoc vs ${d.joursReels}j ASF (+${diff}j)</div>`;
+    else               alertHTML = `<div style="margin-top:6px;padding:4px 10px;background:var(--vert-pale);color:var(--vert);border-radius:4px;font-size:12px;display:inline-block">✅ ${d.joursReels}j confirmés</div>`;
+  }
+  modalPending = { type: 'ASF', data: d };
+  document.getElementById('mTitle').textContent = '✅ État de Service Fait';
+  document.getElementById('mSub').textContent   = idx !== -1 ? '📎 Convocation trouvée — mise à jour de la ligne.' : '⚠️ Aucune convocation pour ces dates — nouvelle ligne créée.';
+  document.getElementById('mFields').innerHTML  = `
+    <div class="frow">
+      <div class="fg"><label>Date début</label><input id="f_deb" type="date" value="${fi(d.deb)}"></div>
+      <div class="fg"><label>Date fin</label><input id="f_fin" type="date" value="${fi(d.fin)}"></div>
+    </div>
+    <div class="fg"><label>Jours réels soldés</label><input id="f_jreels" type="number" value="${d.joursReels||''}" min="1">${alertHTML}</div>
+    <div class="fg"><label>Date validation ASF</label><input id="f_datevalid" type="date" value="${fi(d.dateValid)}"></div>
+  `;
+  document.getElementById('overlay').classList.add('show');
+}
+
+function ouvrirBMS(d) {
+  modalPending = { type: 'BMS', data: d };
+  let missHTML = '';
+  d.missions.forEach((m, i) => {
+    missHTML += `
+      <div style="background:var(--fond);border-radius:4px;padding:10px 12px;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--doux);margin-bottom:6px">MISSION ${i+1} — ${m.deb} → ${m.fin}</div>
+        <div class="frow">
+          <div class="fg"><label>Solde Base (€)</label><input type="number" id="f_solde_${i}" value="${m.solde||''}" step="0.01"></div>
+          <div class="fg"><label>ISAO (€)</label><input type="number" id="f_isao_${i}" value="${m.isao||''}" step="0.01"></div>
+        </div>
+      </div>`;
+  });
+  document.getElementById('mTitle').textContent = `💰 BMS ${d.mois} ${d.annee}`;
+  document.getElementById('mSub').textContent   = `${d.missions.length} mission(s) détectée(s).`;
+  document.getElementById('mFields').innerHTML  = missHTML + `
+    <div class="frow">
+      <div class="fg"><label>Allocation Études (€)</label><input type="number" id="f_alloc" value="${d.alloc||''}" step="0.01"></div>
+      <div class="fg"><label>NET À PAYER BMS (€)</label><input type="number" id="f_net" value="${d.net||''}" step="0.01"></div>
+    </div>`;
+  document.getElementById('overlay').classList.add('show');
+}
+
+function closeModal() { document.getElementById('overlay').classList.remove('show'); modalPending = null; }
+
+async function confirmModal() {
+  if (!modalPending) return;
+  const { type, data } = modalPending;
+
+  if (type === 'CONV') {
+    const deb = if2(document.getElementById('f_deb').value);
+    const fin = if2(document.getElementById('f_fin').value);
+    if (!deb || !fin) { toast('❌ Dates obligatoires', 'terr'); return; }
+    const annee    = parseInt(deb.split('/')[2]);
+    const rows     = getRows(annee);
+    const idx      = findIdx(rows, deb, fin);
+    const joursTheo= parseInt(document.getElementById('f_jtheo').value) || null;
+    const mission  = document.getElementById('f_mission').value.trim();
+    const code     = document.getElementById('f_code').value.trim();
+    const ref      = document.getElementById('f_ref').value.trim();
+    if (idx !== -1) { if (joursTheo) rows[idx].joursTheo = joursTheo; if (mission) rows[idx].mission = mission; rows[idx].code = code; rows[idx].ref = ref; }
+    else { rows.push({ id: Date.now(), mission, deb, fin, joursTheo, joursReels: null, dateValid: '', ecart: '', statut: 1, code, ref, solde: 0, isao: 0, alloc: 0, net: 0 }); rows.sort((a,b) => ts(a.deb)-ts(b.deb)); }
+    setRows(annee, rows);
+    anneeActive = annee;
+
+  } else if (type === 'ASF') {
+    const deb       = if2(document.getElementById('f_deb').value);
+    const fin       = if2(document.getElementById('f_fin').value);
+    const joursReels= parseInt(document.getElementById('f_jreels').value) || null;
+    const dateValid = if2(document.getElementById('f_datevalid').value);
+    const annee     = parseInt(deb.split('/')[2]);
+    const rows      = getRows(annee);
+    let   idx       = findIdx(rows, deb, fin);
+    if (idx === -1) { rows.push({ id: Date.now(), mission:'', deb, fin, joursTheo:null, joursReels:null, dateValid:'', ecart:'', statut:1, code:'', ref:'', solde:0, isao:0, alloc:0, net:0 }); rows.sort((a,b)=>ts(a.deb)-ts(b.deb)); idx = findIdx(rows, deb, fin); }
+    const l = rows[idx];
+    l.joursReels = joursReels; l.dateValid = dateValid; l.statut = Math.max(l.statut||1, 2);
+    if (l.joursTheo && joursReels !== null) {
+      const d = joursReels - l.joursTheo;
+      l.ecart = d < 0 ? `⚠️ ${l.joursTheo}j convoc vs ${joursReels}j ASF (${d}j)` : d > 0 ? `ℹ️ ${l.joursTheo}j convoc vs ${joursReels}j ASF (+${d}j)` : `✅ ${joursReels}j confirmés`;
+    } else { l.ecart = `✅ ${joursReels||'?'}j`; }
+    setRows(annee, rows);
+    anneeActive = annee;
+
+  } else if (type === 'BMS') {
+    const alloc = parseFloat(document.getElementById('f_alloc').value) || 0;
+    const net   = parseFloat(document.getElementById('f_net').value)   || 0;
+    data.missions.forEach((m, i) => {
+      const solde = parseFloat(document.getElementById(`f_solde_${i}`).value) || 0;
+      const isao  = parseFloat(document.getElementById(`f_isao_${i}`).value)  || 0;
+      const annee = parseInt(m.deb.split('/')[2]);
+      const rows  = getRows(annee);
+      let   idx   = findIdx(rows, m.deb, m.fin);
+      if (idx === -1) { rows.push({ id: Date.now(), mission:'', deb:m.deb, fin:m.fin, joursTheo:null, joursReels:null, dateValid:'', ecart:'⚠️ BMS sans convoc', statut:1, code:'', ref:'', solde:0, isao:0, alloc:0, net:0 }); rows.sort((a,b)=>ts(a.deb)-ts(b.deb)); idx = findIdx(rows, m.deb, m.fin); }
+      rows[idx].solde  += solde; rows[idx].isao += isao; rows[idx].alloc = alloc; rows[idx].net = net; rows[idx].statut = Math.max(rows[idx].statut||1, 3);
+      setRows(annee, rows);
+    });
+    // BMS sans mission
+    if (data.missions.length === 0 && alloc > 0) {
+      const rows = getRows(data.annee);
+      const m0   = String(moisNum(data.mois)+1).padStart(2,'0');
+      rows.push({ id: Date.now(), mission:`Alloc études ${data.mois}`, deb:`01/${m0}/${data.annee}`, fin:`28/${m0}/${data.annee}`, joursTheo:null, joursReels:null, dateValid:'', ecart:'', statut:3, code:'', ref:'', solde:0, isao:0, alloc, net });
+      setRows(data.annee, rows);
+      anneeActive = data.annee;
+    }
+  }
+
+  closeModal();
+  // Sauvegarde Sheets
+  showProc('Sauvegarde…');
+  try { await sauvegarderSheets(); } catch(e) { console.warn('Sheets save:', e); }
+  hideProc();
+  rafraichir();
+  toast('✅ Enregistré', 'tok');
+}
+
+function ajouterManuel() {
+  modalPending = { type: 'CONV', data: { deb:'', fin:'', joursTheo:null, ref:'', code:'' } };
+  document.getElementById('mTitle').textContent = '✏️ Ajouter manuellement';
+  document.getElementById('mSub').textContent   = 'Saisie libre d\'une activité.';
+  document.getElementById('mFields').innerHTML  = `
+    <div class="fg"><label>Nom de la mission</label><input id="f_mission" type="text" placeholder="Ex: Stage CFIM Fréjus"></div>
+    <div class="frow">
+      <div class="fg"><label>Date début</label><input id="f_deb" type="date"></div>
+      <div class="fg"><label>Date fin</label><input id="f_fin" type="date"></div>
+    </div>
+    <div class="fg"><label>Jours théoriques</label><input id="f_jtheo" type="number" min="1"></div>
+    <div class="fg"><label>Type d'activité</label><input id="f_code" type="text" placeholder="Terrain, Instruction…"></div>
+    <div class="fg"><label>Référence OM</label><input id="f_ref" type="text"></div>
+  `;
+  document.getElementById('overlay').classList.add('show');
+}
+
+// ════════════════════════════════════════════════════════════
+//  RENDU
+// ════════════════════════════════════════════════════════════
+function rafraichir() { renderAnnees(); renderKPI(); renderTableau(); }
+
+function renderAnnees() {
+  const cur   = new Date().getFullYear();
+  const found = Object.keys(state).map(Number);
+  const all   = [...new Set([cur, anneeActive, ...found])].sort((a,b) => b-a);
+  document.getElementById('annees').innerHTML = all.map(a =>
+    `<button class="btn-annee${a===anneeActive?' active':''}" onclick="changerAnnee(${a})">${a}</button>`
+  ).join('');
+  document.getElementById('anneeLabel').textContent = `— ${anneeActive}`;
+}
+
+function changerAnnee(a) { anneeActive = a; rafraichir(); }
+
+function renderKPI() {
+  const rows  = getRows(anneeActive);
+  const jours = rows.reduce((s,l) => s + (l.joursReels || l.joursTheo || 0), 0);
+  const pct   = Math.min(jours/37*100, 100);
+  document.getElementById('kJours').textContent  = jours;
+  document.getElementById('kFidVal').textContent = jours+'/37';
+  document.getElementById('fCount').textContent  = jours+' / 37 jours';
+  document.getElementById('fFill').style.width   = pct+'%';
+  document.getElementById('fFill').className     = 'fideres-fill'+(jours>=37?' done':'');
+  document.getElementById('kFidBadge').innerHTML = jours>=37
+    ? '<span class="badge b-ok">🟢 ÉLIGIBLE</span>'
+    : `<span class="badge b-warn">${37-jours}j restants</span>`;
+  let percu=0, att=0;
+  rows.forEach(l => { if(l.statut>=3) percu+=(l.net||0)+(l.alloc||0); else att+=((l.joursReels||l.joursTheo||0)*60.385); });
+  document.getElementById('kPercu').textContent  = eur(percu);
+  document.getElementById('kAtt').textContent    = eur(att);
+  const etud = rows.reduce((s,l) => s+(l.alloc||0), 0);
+  document.getElementById('kEtud').textContent   = eur(etud);
+  document.getElementById('kEtudSub').textContent= `Sept ${anneeActive-1} → Août ${anneeActive}`;
+}
+
+function renderTableau() {
+  const rows = getRows(anneeActive);
+  const tbody= document.getElementById('tbody');
+  const emp  = document.getElementById('emptyState');
+  if (!rows.length) { tbody.innerHTML=''; emp.style.display='block'; return; }
+  emp.style.display='none';
+  const sL = ['','📋 Convoqué','✅ ASF OK','💰 Payé'];
+  const sC = ['','s1','s2','s3'];
+  tbody.innerHTML = rows.map((l,i) => {
+    const st = Math.min(l.statut||1, 3);
+    const ec = l.ecart?.startsWith('⚠️')||l.ecart?.startsWith('🔴') ? 'warn' : l.ecart?.startsWith('✅') ? 'ok' : l.ecart?.startsWith('ℹ️') ? 'warn' : 'muted';
+    let vp = '<span class="muted">—</span>';
+    if (l.net>0 && l.joursReels) {
+      const att = l.joursReels*60.385;
+      vp = Math.abs(l.net-att)<20
+        ? `<span class="ok">✅ ${eur(l.net)}</span>`
+        : `<span class="warn">⚠️ BMS=${eur(l.net)} / Att≈${eur(att)}</span>`;
+    } else if (l.net>0) vp = `<span class="ok">💰 ${eur(l.net)}</span>`;
+    return `<tr>
+      <td class="td-mission"><input type="text" value="${esc(l.mission||'')}" placeholder="— nommer —" onchange="majMission(${anneeActive},${i},this.value)" title="${esc(l.ref||'')}"></td>
+      <td class="td-date">${l.deb||'—'}</td><td class="td-date">${l.fin||'—'}</td>
+      <td class="td-jours">${l.joursTheo||'—'}</td>
+      <td class="td-jours" style="color:var(--kaki-mid)">${l.joursReels||'—'}</td>
+      <td><span class="${ec}">${l.ecart||'—'}</span></td>
+      <td><span class="statut ${sC[st]}">${sL[st]}</span></td>
+      <td class="td-mont">${l.solde?eur(l.solde):'—'}</td>
+      <td class="td-mont">${l.isao ?eur(l.isao) :'—'}</td>
+      <td class="td-mont">${l.alloc?eur(l.alloc):'—'}</td>
+      <td class="td-mont">${l.net  ?eur(l.net)  :'—'}</td>
+      <td>${vp}</td>
+      <td><button class="btn-sm btn-del" onclick="delRow(${anneeActive},${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+//  ACTIONS
+// ════════════════════════════════════════════════════════════
+async function majMission(annee, idx, val) {
+  const rows = getRows(annee); if (rows[idx]) { rows[idx].mission = val; setRows(annee, rows); }
+  try { await sauvegarderSheets(); } catch(e) {}
+}
+
+async function delRow(annee, idx) {
+  if (!confirm('Supprimer cette ligne ?')) return;
+  const rows = getRows(annee); rows.splice(idx,1); setRows(annee, rows);
+  try { await sauvegarderSheets(); } catch(e) {}
+  rafraichir(); toast('🗑️ Ligne supprimée', 'tok');
+}
+
+// ════════════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════════════
+function findIdx(rows, deb, fin) { return rows.findIndex(r => r.deb===deb && r.fin===fin); }
+function fi(fr) { if(!fr||!fr.includes('/'))return''; const[d,m,y]=fr.split('/'); return `${y}-${m}-${d}`; }
+function if2(inp) { if(!inp)return''; const[y,m,d]=inp.split('-'); return `${d}/${m}/${y}`; }
+function ts(fr) { if(!fr)return 0; const[d,m,y]=fr.split('/'); return new Date(y,m-1,d).getTime(); }
+function eur(v) { return new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(v||0); }
+function esc(s) { return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function moisNum(s) { const m={JANVIER:0,FEVRIER:1,FÉVRIER:1,MARS:2,AVRIL:3,MAI:4,JUIN:5,JUILLET:6,AOUT:7,AOÛT:7,SEPTEMBRE:8,OCTOBRE:9,NOVEMBRE:10,DECEMBRE:11,DÉCEMBRE:11}; return m[s?.toUpperCase()]??0; }
+function showProc(t) { document.getElementById('procTxt').textContent=t; document.getElementById('proc').classList.add('show'); }
+function hideProc()  { document.getElementById('proc').classList.remove('show'); }
+function toast(msg, cls='tok') { const t=document.getElementById('toast'); t.textContent=msg; t.className=`toast ${cls} show`; setTimeout(()=>t.classList.remove('show'),3500); }
+
+// Drag & drop
+['Conv','ASF','BMS'].forEach(id => {
+  const z = document.getElementById('dz'+id);
+  if (!z) return;
+  z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('over'); });
+  z.addEventListener('dragleave', () => z.classList.remove('over'));
+  z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('over'); const f=e.dataTransfer.files[0]; if(f){ const fake={files:[f],value:''}; onFile(fake, id.toUpperCase()); } });
+});
+
+// ════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════
+async function init() {
+  const connected = checkAuth();
+
+  if (connected) {
+    document.getElementById('bannerConnect').style.display = 'none';
+    document.getElementById('appContent').style.display    = 'flex';
+
+    // Info utilisateur
+    try {
+      const u = await getUserInfo();
+      document.getElementById('authArea').innerHTML = `
+        <div class="user-info">
+          <img class="user-avatar" src="${u.picture}" alt="">
+          <span>${u.given_name}</span>
+          <button class="btn-deconnect" onclick="signOut()">Déconnexion</button>
+        </div>`;
+    } catch(e) {}
+
+    // Chargement données Sheets
+    showProc('Chargement des données…');
+    try {
+      await getOrCreateSheet();
+      await getOrCreateFolder();
+      await chargerDepuisSheets();
+    } catch(e) { console.warn('Init data:', e); }
+    hideProc();
+
+    // Fallback localStorage
+    if (!Object.keys(state).length) {
+      try { state = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
+    }
+  } else {
+    // Fallback local si pas connecté
+    try { state = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
+    document.getElementById('appContent').style.display = 'flex';
+  }
+
+  rafraichir();
+}
+
+init();
+</script>
+</body>
+</html>
