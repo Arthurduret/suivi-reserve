@@ -794,6 +794,12 @@ async function confirmModal() {
       setRows(annee, rows);
     });
 
+    // Toujours stocker le NET BMS même s'il n'y a pas de mission soldée
+    // (ex: BMS avec uniquement la prime étudiante)
+    if (data.missions.length === 0) {
+      addBMS(data.annee, { mois: data.mois, annee: data.annee, net, alloc });
+    }
+
     anneeActive = data.annee;
   }
 
