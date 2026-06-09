@@ -372,7 +372,7 @@
         </table>
       </div>
       <div style="padding:12px 20px;background:var(--or-pale);border-top:1px solid var(--bord);font-size:12px;color:#7A5800">
-        ℹ️ Prime étudiante : 100€ brut/mois → 90,47€ net/mois (après cotisations CSG/CRDS). Pour les mois sans mission soldée, le NET À PAYER affiché correspond au net réel de la prime.
+        ℹ️ Prime étudiante : 100€ brut → 90,47€ net/mois (après CSG/CRDS). Regroupement possible (ex: 400€ brut = 4 mois × 90,47€ = 361,88€ net).
       </div>
     </div>
 
@@ -1058,12 +1058,14 @@ function renderKPI() {
         && getRows(anneeActive).filter(l => l.bmsMois===b.mois).every(l => !l.solde && !l.isao))
         .reduce((s,b) => s + (b.net||0), 0)
     : etudNet;
-  document.getElementById('kEtud').textContent    = eur(etudNetCalc || etudNet || etudBrut);
-  document.getElementById('kEtudSub').textContent = etudNet > 0
-    ? `Net réel · ${nbMoisAlloc} mois`
-    : etudBrut > 0
-      ? `≈${eur(etudBrut * TAUX_NET_PRIME)} net estimé`
-      : `0 mois`;
+  // Prime nette = nb mensualités × 90,47€
+  const totalAllocBrut = bms.reduce((s,b) => s + (b.alloc||0), 0);
+  const totalAllocNet  = Math.round(totalAllocBrut * 0.9047 * 100) / 100;
+  const nbMensualites  = Math.round(totalAllocBrut / 100);
+  document.getElementById('kEtud').textContent    = eur(totalAllocNet);
+  document.getElementById('kEtudSub').textContent = nbMensualites > 0
+    ? `${nbMensualites} mois × 90,47€ net`
+    : 'aucun mois';
 }
 
 function renderTableau() {
