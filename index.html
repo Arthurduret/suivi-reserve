@@ -180,6 +180,15 @@
   .btn-sm  { padding: 4px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; border: none; font-weight: 600; }
   .btn-del { background: var(--rouge-pale); color: var(--rouge); }
 
+  /* ── CHIPS MISSION ── */
+  .chips-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; user-select: none; }
+  .chip:hover { filter: brightness(0.92); }
+  .chip.selected { border-color: var(--kaki); box-shadow: 0 0 0 2px rgba(61,74,31,0.2); }
+  .chip-add { background: var(--fond); color: var(--doux); border: 2px dashed var(--bord); }
+  .chip-add:hover { border-color: var(--kaki-light); color: var(--kaki); background: var(--kaki-pale); }
+  .mission-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-left: 4px; vertical-align: middle; }
+
   /* ── PRIME DETAIL ── */
   .prime-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
   .prime-card { border-radius: var(--r); padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; }
@@ -529,9 +538,18 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 let accessToken   = null;
 let sheetId       = null;
 let driveFolderId = null;
-let state         = {};   // state[annee].rows = lignes missions
-let bmsState      = {};   // bmsState[annee]   = liste des BMS { mois, annee, net, alloc }
-let docsState     = [];   // [{name, type, date, driveId, annee}]
+let state         = {};
+let bmsState      = {};
+let docsState     = [];
+const DEFAULT_TYPES = [
+  { label: 'Terrain',      color: '#6B3FA0', bg: '#F3E8FF' },
+  { label: 'Instruction',  color: '#1A5C8A', bg: '#E8F2FB' },
+  { label: 'Encadrement',  color: '#D4780A', bg: '#FEF3E2' },
+  { label: 'Stage',        color: '#2D7A3A', bg: '#E8F5EA' },
+  { label: 'Garde',        color: '#C0392B', bg: '#FDECEA' },
+  { label: 'PassCom',      color: '#8A6A00', bg: '#FBF5E0' },
+];
+let missionTypes = [];
 let anneeActive   = new Date().getFullYear();
 let tabActive     = 'missions';
 let modalPending  = null;
@@ -554,6 +572,60 @@ function changerTab(tab) {
     document.getElementById('tab-' + t).classList.toggle('active', t === tab);
     document.getElementById('panel-' + t).classList.toggle('active', t === tab);
   });
+}
+
+// ════════════════════════════════════════════════════════════
+//  CHIPS MISSION
+// ════════════════════════════════════════════════════════════
+function loadMissionTypes() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('missionTypes') || '[]');
+    missionTypes = [...DEFAULT_TYPES, ...saved];
+  } catch(e) { missionTypes = [...DEFAULT_TYPES]; }
+}
+
+function saveMissionTypes() {
+  const custom = missionTypes.filter(t => !DEFAULT_TYPES.find(d => d.label === t.label));
+  localStorage.setItem('missionTypes', JSON.stringify(custom));
+}
+
+function renderChips(targetInputId, selectedLabel) {
+  const colors = ['#6B3FA0','#1A5C8A','#D4780A','#2D7A3A','#C0392B','#8A6A00','#2A7A7A','#7A3A5A'];
+  const bgs    = ['#F3E8FF','#E8F2FB','#FEF3E2','#E8F5EA','#FDECEA','#FBF5E0','#E0F5F5','#F5E8F0'];
+  return `<div class="chips-wrap" id="chips_${targetInputId}">
+    ${missionTypes.map(t => `
+      <span class="chip${selectedLabel === t.label ? ' selected' : ''}"
+        style="background:${t.bg};color:${t.color}"
+        onclick="selectChip('${targetInputId}','${t.label}','${t.color}','${t.bg}')">
+        ${t.label}
+      </span>`).join('')}
+    <span class="chip chip-add" onclick="ajouterChip('${targetInputId}')">+ Personnalisé</span>
+  </div>`;
+}
+
+function selectChip(inputId, label, color, bg) {
+  const input = document.getElementById(inputId);
+  if (input) input.value = label;
+  // Mettre à jour visuellement les chips
+  document.querySelectorAll(`#chips_${inputId} .chip:not(.chip-add)`).forEach(c => {
+    c.classList.toggle('selected', c.textContent.trim() === label);
+  });
+}
+
+function ajouterChip(inputId) {
+  const label = prompt('Nom du type de mission :');
+  if (!label || !label.trim()) return;
+  const l = label.trim();
+  if (missionTypes.find(t => t.label === l)) { selectChip(inputId, l); return; }
+  const palette = ['#2A7A7A','#7A3A5A','#3A5A7A','#5A7A3A'];
+  const bgs2    = ['#E0F5F5','#F5E8F0','#E8EFF5','#EFF5E8'];
+  const idx = missionTypes.length % palette.length;
+  missionTypes.push({ label: l, color: palette[idx], bg: bgs2[idx] });
+  saveMissionTypes();
+  // Ré-injecter les chips
+  const wrap = document.getElementById(`chips_${inputId}`);
+  if (wrap) wrap.outerHTML = renderChips(inputId, l);
+  selectChip(inputId, l);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -942,6 +1014,11 @@ function ouvrirBMS(d) {
     missHTML += `
       <div style="background:var(--fond);border-radius:4px;padding:10px 12px;margin-bottom:8px">
         <div style="font-size:11px;font-weight:700;color:var(--kaki);margin-bottom:8px">MISSION ${i+1} — ${m.deb} → ${m.fin}</div>
+        <div class="fg" style="margin-bottom:8px">
+          <label>Type de mission</label>
+          ${renderChips('f_mission_' + i, '')}
+          <input id="f_mission_${i}" type="text" placeholder="ou saisissez librement…" style="margin-top:4px">
+        </div>
         <div class="frow">
           <div class="fg">
             <label>✅ Jours effectués (confirmation de service)</label>
@@ -1032,6 +1109,8 @@ async function confirmModal() {
         rows.sort((a,b)=>ts(a.deb)-ts(b.deb));
         idx = findIdx(rows, m.deb, m.fin);
       }
+      const missionNom = document.getElementById(`f_mission_${i}`)?.value?.trim();
+      if (missionNom) rows[idx].mission = missionNom;
       rows[idx].solde    += solde;
       rows[idx].isao     += isao;
       rows[idx].bmsMois   = data.mois;
@@ -1071,7 +1150,11 @@ function ajouterManuel() {
   document.getElementById('mTitle').textContent = '✏️ Ajouter manuellement';
   document.getElementById('mSub').textContent   = 'Saisie libre d\'une activité.';
   document.getElementById('mFields').innerHTML  = `
-    <div class="fg"><label>Nom de la mission</label><input id="f_mission" type="text" placeholder="Ex: Stage CFIM Fréjus"></div>
+    <div class="fg">
+      <label>Type de mission</label>
+      ${renderChips('f_mission', '')}
+      <input id="f_mission" type="text" placeholder="ou saisissez librement…">
+    </div>
     <div class="frow">
       <div class="fg"><label>Date début</label><input id="f_deb" type="date"></div>
       <div class="fg"><label>Date fin</label><input id="f_fin" type="date"></div>
@@ -1223,6 +1306,8 @@ function renderTabMissions() {
     const st  = Math.min(l.statut||1, 3);
     const ec  = l.ecart?.startsWith('⚠️') ? 'warn' : l.ecart?.startsWith('✅') ? 'ok' : l.ecart?.startsWith('ℹ️') ? 'muted' : 'muted';
     const idx = rows.indexOf(l);
+    const typeInfo = missionTypes.find(t => t.label === l.mission);
+    const badge = typeInfo ? `<span class="mission-badge" style="background:${typeInfo.bg};color:${typeInfo.color}">${typeInfo.label}</span>` : '';
     const isaoRow = l.isao > 0 ? `
     <tr class="tr-isao">
       <td style="padding:4px 14px 8px 32px;color:#7B3FA0;font-size:12px;font-weight:600">
@@ -1235,7 +1320,7 @@ function renderTabMissions() {
       <td colspan="2"></td>
     </tr>` : '';
     return `<tr>
-      <td class="td-mission"><input type="text" value="${esc(l.mission||'')}" placeholder="— nommer —" onchange="majMission(${anneeActive},${idx},this.value)"></td>
+      <td class="td-mission">${badge}<input type="text" value="${esc(l.mission||'')}" placeholder="— nommer —" onchange="majMission(${anneeActive},${idx},this.value)"></td>
       <td class="td-date">${l.deb||'—'}</td>
       <td class="td-date">${l.fin||'—'}</td>
       <td class="td-jours">${l.joursTheo||'—'}</td>
@@ -1499,6 +1584,7 @@ async function pickerCallback(data) {
 //  INIT
 // ════════════════════════════════════════════════════════════
 async function init() {
+  loadMissionTypes();
   const connected = checkAuth();
 
   if (connected) {
