@@ -345,11 +345,9 @@
                 <th>Mission</th>
                 <th class="sortable" onclick="sortTable('deb')">Début ↕</th>
                 <th>Fin</th>
-                <th>J. Théo</th>
                 <th>J. Réels</th>
                 <th>Écart</th>
                 <th class="sortable" onclick="sortTable('statut')">Statut ↕</th>
-                <th>Ref. OM</th>
                 <th></th>
               </tr>
             </thead>
@@ -357,9 +355,8 @@
             <tfoot id="tfoot" style="display:none">
               <tr>
                 <td colspan="3">TOTAL</td>
-                <td class="td-jours" id="ftJTheo">—</td>
                 <td class="td-jours" id="ftJReels">—</td>
-                <td colspan="4"></td>
+                <td colspan="3"></td>
               </tr>
             </tfoot>
           </table>
@@ -767,6 +764,7 @@ async function chargerDepuisSheets() {
         obj.id         = obj.id || Date.now() + Math.random();
         try { if (obj.srcDoc    && obj.srcDoc[0]    === '{') obj.srcDoc    = JSON.parse(obj.srcDoc);    } catch(e) { obj.srcDoc    = null; }
         try { if (obj.srcDocBMS && obj.srcDocBMS[0] === '{') obj.srcDocBMS = JSON.parse(obj.srcDocBMS); } catch(e) { obj.srcDocBMS = null; }
+        if (obj.ecart && obj.ecart.includes('BMS sans convoc')) obj.ecart = '';
         state[annee].rows.push(obj);
       });
     }
@@ -1321,9 +1319,7 @@ function renderTabMissions() {
   if (!rows.length) { tbody.innerHTML = ''; emp.style.display = 'block'; tfoot.style.display = 'none'; return; }
   emp.style.display = 'none';
 
-  const totJT = rows.reduce((s,l) => l.isaoOnly ? s : s + (l.joursTheo||0), 0);
   const totJR = rows.reduce((s,l) => l.isaoOnly ? s : s + (l.joursReels||0), 0);
-  document.getElementById('ftJTheo').textContent  = totJT  || '—';
   document.getElementById('ftJReels').textContent = totJR  || '—';
   tfoot.style.display = '';
 
@@ -1383,15 +1379,9 @@ function renderTabMissions() {
       </td>
       <td class="td-date">${l.deb||'—'}</td>
       <td class="td-date">${l.fin||'—'}</td>
-      <td class="td-jours">${l.joursTheo||'—'}</td>
       <td class="td-jours" style="color:var(--kaki-mid)">${l.joursReels||'—'}</td>
       <td>${ecartHtml}</td>
       <td><span class="statut ${sC[st]}">${sL[st]}</span></td>
-      <td class="td-date muted" style="white-space:nowrap">
-        ${l.ref||'—'}
-        ${l.srcDoc?.driveId ? `<a href="https://drive.google.com/file/d/${l.srcDoc.driveId}/view" target="_blank" title="${l.srcDoc.name}" style="margin-left:5px;text-decoration:none;font-size:13px">📄</a>` : ''}
-        ${l.srcDocBMS?.driveId ? `<a href="https://drive.google.com/file/d/${l.srcDocBMS.driveId}/view" target="_blank" title="${l.srcDocBMS.name}" style="margin-left:2px;text-decoration:none;font-size:13px">💰</a>` : ''}
-      </td>
       <td><button class="btn-sm btn-del" onclick="delRow(${anneeActive},${idx})">✕</button></td>
     </tr>${isaoRow}`;
   }).join('');
@@ -1725,13 +1715,19 @@ async function init() {
     if (!Object.keys(state).length)    try { state    = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
     if (!Object.keys(bmsState).length) try { bmsState = JSON.parse(localStorage.getItem('reserveBMS') ||'{}'); } catch(e) {}
     try { docsState = JSON.parse(localStorage.getItem('reserveDocs')||'[]'); } catch(e) {}
-    // Nettoyage automatique des doublons au chargement
-    Object.keys(state).forEach(annee => { const r = getRows(Number(annee)); setRows(Number(annee), deduplicerMissions([...r])); });
+    // Nettoyage au chargement
+    Object.keys(state).forEach(annee => {
+      const r = getRows(Number(annee)).map(l => { if (l.ecart?.includes('BMS sans convoc')) l.ecart = ''; return l; });
+      setRows(Number(annee), deduplicerMissions([...r]));
+    });
   } else {
     try { state    = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
     try { bmsState = JSON.parse(localStorage.getItem('reserveBMS') ||'{}'); } catch(e) {}
     try { docsState = JSON.parse(localStorage.getItem('reserveDocs')||'[]'); } catch(e) {}
-    Object.keys(state).forEach(annee => { const r = getRows(Number(annee)); setRows(Number(annee), deduplicerMissions([...r])); });
+    Object.keys(state).forEach(annee => {
+      const r = getRows(Number(annee)).map(l => { if (l.ecart?.includes('BMS sans convoc')) l.ecart = ''; return l; });
+      setRows(Number(annee), deduplicerMissions([...r]));
+    });
     document.getElementById('appContent').style.display = 'flex';
   }
 
