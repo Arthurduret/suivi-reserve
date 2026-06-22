@@ -346,7 +346,6 @@
                 <th class="sortable" onclick="sortTable('deb')">Début ↕</th>
                 <th>Fin</th>
                 <th>J. Réels</th>
-                <th>Écart</th>
                 <th class="sortable" onclick="sortTable('statut')">Statut ↕</th>
                 <th></th>
               </tr>
@@ -1380,7 +1379,6 @@ function renderTabMissions() {
       <td class="td-date">${l.deb||'—'}</td>
       <td class="td-date">${l.fin||'—'}</td>
       <td class="td-jours" style="color:var(--kaki-mid)">${l.joursReels||'—'}</td>
-      <td>${ecartHtml}</td>
       <td><span class="statut ${sC[st]}">${sL[st]}</span></td>
       <td><button class="btn-sm btn-del" onclick="delRow(${anneeActive},${idx})">✕</button></td>
     </tr>${isaoRow}`;
