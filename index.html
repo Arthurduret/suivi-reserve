@@ -631,7 +631,6 @@ function validerChip(inputId) {
   if (!l) { nameEl?.focus(); return; }
   const hex = colEl?.value || '#9B59B6';
   const bg  = hex + '22';
-  if (!missionTypes.find(t => t.label === l)) { missionTypes.push({ label: l, color: hex, bg }); saveMissionTypes(); }
   const wrap = document.getElementById(`chips_${inputId}`);
   if (wrap) wrap.outerHTML = renderChips(inputId, l);
   selectChip(inputId, l);
@@ -1569,7 +1568,6 @@ async function validerInlineChip(annee, idx) {
   if (!l) { nameEl?.focus(); return; }
   const hex = colEl?.value || '#9B59B6';
   const bg  = hex + '22';
-  if (!missionTypes.find(t => t.label === l)) { missionTypes.push({ label: l, color: hex, bg }); saveMissionTypes(); }
   const rows = getRows(annee);
   if (rows[idx]) { rows[idx].mission = l; rows[idx].missionColor = hex; setRows(annee, rows); }
   document.querySelectorAll('[id^="chips_row_"]').forEach(e => e.style.display = 'none');
