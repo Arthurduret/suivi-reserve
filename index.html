@@ -400,9 +400,9 @@
               <div class="pc-sub" id="pEtudSub">0 mois × 90,47 € net</div>
             </div>
             <div class="prime-card pc-total">
-              <div class="pc-label">Solde brute ENSAP</div>
+              <div class="pc-label">Brut total</div>
               <div class="pc-val" id="pSolde">0 €</div>
-              <div class="pc-sub">total brut missions</div>
+              <div class="pc-sub" id="pSoldeSub">solde + ISAO + alloc</div>
             </div>
           </div>
           <div class="note-info" style="border-radius:var(--r)">
@@ -1208,14 +1208,16 @@ function renderTabPaiements() {
   document.getElementById('kAtt').textContent   = eur(att);
 
   // Primes — depuis toutes les missions liées aux BMS de cette année
-  const totalISAO  = rowsBmsAnnee.reduce((s,l) => s + (l.isao||0), 0);
-  const totalSolde = rowsBmsAnnee.reduce((s,l) => l.isaoOnly ? s : s + (l.solde||0), 0);
+  const totalISAO      = rowsBmsAnnee.reduce((s,l) => s + (l.isao||0), 0);
+  const totalSolde     = rowsBmsAnnee.reduce((s,l) => l.isaoOnly ? s : s + (l.solde||0), 0);
   const totalAllocBrut = bms.reduce((s,b) => s + (b.alloc||0), 0);
+  const totalBrut      = totalSolde + totalISAO + totalAllocBrut;
   const totalAllocNet  = Math.round(totalAllocBrut * 0.9047 * 100) / 100;
   const nbMois         = Math.round(totalAllocBrut / 100);
 
   document.getElementById('pIsao').textContent   = eur(totalISAO);
-  document.getElementById('pSolde').textContent  = eur(totalSolde);
+  document.getElementById('pSolde').textContent  = eur(totalBrut);
+  document.getElementById('pSoldeSub').textContent = `${eur(totalSolde)} solde + ${eur(totalISAO)} ISAO + ${eur(totalAllocBrut)} alloc`;
   document.getElementById('pEtud').textContent   = eur(totalAllocNet);
   document.getElementById('pEtudSub').textContent = nbMois > 0 ? `${nbMois} mois × 90,47 € net` : '0 mois';
 
