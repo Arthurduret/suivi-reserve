@@ -182,7 +182,7 @@
 
   /* ── CHIPS MISSION ── */
   .chips-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; user-select: none; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 10px 28px; border-radius: 20px; font-size: 15px; font-weight: 700; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; user-select: none; letter-spacing: 0.4px; }
   .chip:hover { filter: brightness(0.92); }
   .chip.selected { border-color: var(--kaki); box-shadow: 0 0 0 2px rgba(61,74,31,0.2); }
   .chip-add { background: var(--fond); color: var(--doux); border: 2px dashed var(--bord); }
@@ -621,7 +621,6 @@ function ajouterChip(inputId) {
   const hex = couleur.trim().startsWith('#') ? couleur.trim() : '#' + couleur.trim();
   const bg  = hex + '22';
   missionTypes.push({ label: l, color: hex, bg });
-  saveMissionTypes();
   const wrap = document.getElementById(`chips_${inputId}`);
   if (wrap) wrap.outerHTML = renderChips(inputId, l);
   selectChip(inputId, l);
@@ -1522,7 +1521,6 @@ async function customMissionType(annee, idx) {
   // Générer une version pâle pour le fond
   const bg = hex + '22'; // transparence 13%
   missionTypes.push({ label: l, color: hex, bg });
-  saveMissionTypes();
   await selectMissionType(annee, idx, l);
 }
 
