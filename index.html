@@ -319,6 +319,7 @@
         <div class="card-hdr">
           <h2>📅 Activités <span id="anneeLabel" style="color:var(--doux);font-weight:400;font-size:13px"></span></h2>
           <div style="display:flex;gap:8px">
+            <button class="btn btn-s btn-sm" onclick="nettoyer()" style="font-size:12px;padding:6px 12px" title="Fusionner les lignes dont les dates se chevauchent">🧹 Doublons</button>
             <button class="btn btn-s btn-sm" onclick="exportCSV()" style="font-size:12px;padding:6px 12px">⬇️ CSV</button>
             <button class="btn btn-s btn-sm" onclick="ajouterManuel()" style="font-size:12px;padding:6px 12px">+ Ajouter</button>
           </div>
@@ -1235,8 +1236,49 @@ function renderTabPaiements() {
 }
 
 // ════════════════════════════════════════════════════════════
-//  ACTIONS TABLE
+//  DÉDUPLICATION MISSIONS
 // ════════════════════════════════════════════════════════════
+function deduplicerMissions(rows) {
+  const toDelete = new Set();
+  rows.forEach((a, i) => {
+    if (toDelete.has(i) || !a.deb) return;
+    rows.forEach((b, j) => {
+      if (i >= j || toDelete.has(j) || !b.deb) return;
+      const aD = ts(a.deb), aF = ts(a.fin || a.deb);
+      const bD = ts(b.deb), bF = ts(b.fin || b.deb);
+      // b est contenu dans a (dates b ⊆ dates a)
+      if (bD >= aD && bF <= aF) {
+        a.isao  = (a.isao  || 0) + (b.isao  || 0);
+        a.solde = (a.solde || 0) + (b.solde || 0);
+        if (!a.mission && b.mission) a.mission = b.mission;
+        toDelete.add(j);
+      }
+      // a est contenu dans b (dates a ⊆ dates b)
+      else if (aD >= bD && aF <= bF) {
+        b.isao  = (b.isao  || 0) + (a.isao  || 0);
+        b.solde = (b.solde || 0) + (a.solde || 0);
+        if (!b.mission && a.mission) b.mission = a.mission;
+        toDelete.add(i);
+      }
+    });
+  });
+  return rows.filter((_, i) => !toDelete.has(i));
+}
+
+async function nettoyer() {
+  let total = 0;
+  Object.keys(state).forEach(annee => {
+    const avant = getRows(Number(annee));
+    const apres = deduplicerMissions([...avant]);
+    total += avant.length - apres.length;
+    setRows(Number(annee), apres);
+  });
+  showProc('Sauvegarde…');
+  try { await sauvegarderSheets(); setSaveStatus(true, 'Sauvegardé'); } catch(e) { setSaveStatus(false, 'Erreur Drive'); }
+  hideProc();
+  rafraichir();
+  toast(total > 0 ? `🧹 ${total} doublon(s) supprimé(s)` : '✅ Aucun doublon détecté', 'tok');
+}
 async function majMission(annee, idx, val) {
   const rows = getRows(annee);
   if (rows[idx]) { rows[idx].mission = val; setRows(annee, rows); }
@@ -1372,9 +1414,12 @@ async function init() {
 
     if (!Object.keys(state).length)    try { state    = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
     if (!Object.keys(bmsState).length) try { bmsState = JSON.parse(localStorage.getItem('reserveBMS') ||'{}'); } catch(e) {}
+    // Nettoyage automatique des doublons au chargement
+    Object.keys(state).forEach(annee => { const r = getRows(Number(annee)); setRows(Number(annee), deduplicerMissions([...r])); });
   } else {
     try { state    = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
     try { bmsState = JSON.parse(localStorage.getItem('reserveBMS') ||'{}'); } catch(e) {}
+    Object.keys(state).forEach(annee => { const r = getRows(Number(annee)); setRows(Number(annee), deduplicerMissions([...r])); });
     document.getElementById('appContent').style.display = 'flex';
   }
 
