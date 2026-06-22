@@ -287,14 +287,10 @@
           <div class="kpi-val" id="kJours">0</div>
           <div class="kpi-sub" id="kJoursSub">janv. → déc.</div>
         </div>
-        <div class="kpi" style="border-left-color:var(--bleu)">
-          <div class="kpi-label">Jours — Année scolaire</div>
+        <div class="kpi kf">
+          <div class="kpi-label">Jours — Année scolaire (seuil 37j)</div>
           <div class="kpi-val" id="kJoursScol">0</div>
           <div class="kpi-sub" id="kJoursScolSub">sept. → août</div>
-        </div>
-        <div class="kpi kf">
-          <div class="kpi-label">Seuil FIDERES / Prime étud.</div>
-          <div class="kpi-val" id="kFidVal">0/37</div>
           <div id="kFidBadge"></div>
         </div>
       </div>
@@ -1090,7 +1086,6 @@ function renderTabMissions() {
 
   // Seuil 37j basé sur l'année scolaire (même référence que la prime étudiante)
   const pct = Math.min(joursScol / 37 * 100, 100);
-  document.getElementById('kFidVal').textContent = `${joursScol}/37`;
   document.getElementById('fCount').textContent  = `${joursScol} / 37 jours`;
   document.getElementById('fFill').style.width   = pct + '%';
   document.getElementById('fFill').className     = 'fideres-fill' + (joursScol >= 37 ? ' done' : '');
