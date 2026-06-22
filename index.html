@@ -269,9 +269,14 @@
     <!-- KPI -->
     <div class="kpi-grid">
       <div class="kpi">
-        <div class="kpi-label">Jours effectués</div>
+        <div class="kpi-label">Jours — Année civile</div>
         <div class="kpi-val" id="kJours">0</div>
-        <div class="kpi-sub">année en cours</div>
+        <div class="kpi-sub" id="kJoursSub">janv. → déc.</div>
+      </div>
+      <div class="kpi" style="border-left-color:var(--bleu)">
+        <div class="kpi-label">Jours — Année scolaire</div>
+        <div class="kpi-val" id="kJoursScol">0</div>
+        <div class="kpi-sub" id="kJoursScolSub">sept. → août</div>
       </div>
       <div class="kpi kf">
         <div class="kpi-label">Prime FIDERES</div>
@@ -1113,16 +1118,47 @@ function renderBMS() {
   }).join('');
 }
 
+// Compte les jours d'une liste de lignes qui tombent dans [debLimit, finLimit] (timestamps)
+function joursEnPeriode(lignes, debLimit, finLimit) {
+  return lignes.reduce((s, l) => {
+    if (l.isaoOnly || (!l.deb && !l.fin)) return s;
+    const dTs = ts(l.deb), fTs = ts(l.fin || l.deb);
+    // Intersection entre la mission et la période
+    const start = Math.max(dTs, debLimit);
+    const end   = Math.min(fTs, finLimit);
+    if (end < start) return s;
+    const jours = Math.round((end - start) / 86400000) + 1;
+    // On ne peut compter plus que les jours réels/théo de la ligne
+    const joursLigne = l.joursReels || l.joursTheo || Math.round((fTs - dTs) / 86400000) + 1;
+    return s + Math.min(jours, joursLigne);
+  }, 0);
+}
+
 function renderKPI() {
   const rows  = getRows(anneeActive);
   const bms   = getBMS(anneeActive);
 
-  // Jours effectués : ISAO-seul exclus (prime terrain = mêmes jours que la mission de base)
-  const jours = rows.reduce((s,l) => l.isaoOnly ? s : s + (l.joursReels || l.joursTheo || 0), 0);
-  const pct   = Math.min(jours/37*100, 100);
-  document.getElementById('kJours').textContent  = jours;
+  // ── Jours année civile (1 jan → 31 déc de l'année active) ────────
+  const debCivile = new Date(anneeActive, 0, 1).getTime();
+  const finCivile = new Date(anneeActive, 11, 31).getTime();
+  const jours = joursEnPeriode(rows, debCivile, finCivile);
+
+  // ── Jours année scolaire (1 sep N-1 → 31 août N) ─────────────────
+  // Ex : si anneeActive = 2025, année scolaire = sept 2024 → août 2025
+  const debScol   = new Date(anneeActive - 1, 8, 1).getTime();  // 1 sept N-1
+  const finScol   = new Date(anneeActive, 7, 31).getTime();     // 31 août N
+  const rowsScol  = [...getRows(anneeActive - 1), ...rows];     // missions des deux années civiles
+  const joursScol = joursEnPeriode(rowsScol, debScol, finScol);
+
+  document.getElementById('kJours').textContent     = jours;
+  document.getElementById('kJoursSub').textContent  = `janv. ${anneeActive} → déc. ${anneeActive}`;
+  document.getElementById('kJoursScol').textContent = joursScol;
+  document.getElementById('kJoursScolSub').textContent = `sept. ${anneeActive-1} → août ${anneeActive}`;
+
+  // FIDERES basé sur l'année civile (critère officiel)
+  const pct = Math.min(jours/37*100, 100);
   document.getElementById('kFidVal').textContent = jours+'/37';
-  document.getElementById('fCount').textContent  = jours+' / 37 jours';
+  document.getElementById('fCount').textContent  = jours+' / 37 jours (année civile)';
   document.getElementById('fFill').style.width   = pct+'%';
   document.getElementById('fFill').className     = 'fideres-fill'+(jours>=37?' done':'');
   document.getElementById('kFidBadge').innerHTML = jours>=37
