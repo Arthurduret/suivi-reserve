@@ -590,8 +590,6 @@ function saveMissionTypes() {
 }
 
 function renderChips(targetInputId, selectedLabel) {
-  const colors = ['#6B3FA0','#1A5C8A','#D4780A','#2D7A3A','#C0392B','#8A6A00','#2A7A7A','#7A3A5A'];
-  const bgs    = ['#F3E8FF','#E8F2FB','#FEF3E2','#E8F5EA','#FDECEA','#FBF5E0','#E0F5F5','#F5E8F0'];
   return `<div class="chips-wrap" id="chips_${targetInputId}">
     ${missionTypes.map(t => `
       <span class="chip${selectedLabel === t.label ? ' selected' : ''}"
@@ -599,31 +597,52 @@ function renderChips(targetInputId, selectedLabel) {
         onclick="selectChip('${targetInputId}','${t.label}','${t.color}','${t.bg}')">
         ${t.label}
       </span>`).join('')}
-    <span class="chip chip-add" onclick="ajouterChip('${targetInputId}')">+ Personnalisé</span>
+    <span class="chip chip-add" id="btn_add_${targetInputId}" onclick="showChipForm('${targetInputId}')">+ Personnalisé</span>
+    <div id="chipform_${targetInputId}" style="display:none;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
+      <input id="chipname_${targetInputId}" type="text" placeholder="Nom de la mission" maxlength="30"
+        style="border:1px solid var(--bord);border-radius:8px;padding:5px 10px;font-size:12px;outline:none;width:160px"
+        onkeydown="if(event.key==='Enter')validerChip('${targetInputId}');if(event.key==='Escape')hideChipForm('${targetInputId}')">
+      <input id="chipcol_${targetInputId}" type="color" value="#9B59B6"
+        style="width:32px;height:32px;border:none;border-radius:6px;cursor:pointer;padding:2px">
+      <button onclick="validerChip('${targetInputId}')"
+        style="background:var(--kaki);color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer">OK</button>
+      <button onclick="hideChipForm('${targetInputId}')"
+        style="background:none;border:1px solid var(--bord);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--doux)">✕</button>
+    </div>
   </div>`;
+}
+
+function showChipForm(inputId) {
+  document.getElementById(`btn_add_${inputId}`).style.display = 'none';
+  const form = document.getElementById(`chipform_${inputId}`);
+  form.style.display = 'flex';
+  setTimeout(() => document.getElementById(`chipname_${inputId}`)?.focus(), 50);
+}
+
+function hideChipForm(inputId) {
+  document.getElementById(`btn_add_${inputId}`).style.display = '';
+  document.getElementById(`chipform_${inputId}`).style.display = 'none';
+}
+
+function validerChip(inputId) {
+  const nameEl = document.getElementById(`chipname_${inputId}`);
+  const colEl  = document.getElementById(`chipcol_${inputId}`);
+  const l = nameEl?.value.trim();
+  if (!l) { nameEl?.focus(); return; }
+  const hex = colEl?.value || '#9B59B6';
+  const bg  = hex + '22';
+  if (!missionTypes.find(t => t.label === l)) missionTypes.push({ label: l, color: hex, bg });
+  const wrap = document.getElementById(`chips_${inputId}`);
+  if (wrap) wrap.outerHTML = renderChips(inputId, l);
+  selectChip(inputId, l);
 }
 
 function selectChip(inputId, label, color, bg) {
   const input = document.getElementById(inputId);
   if (input) input.value = label;
-  // Mettre à jour visuellement les chips
   document.querySelectorAll(`#chips_${inputId} .chip:not(.chip-add)`).forEach(c => {
     c.classList.toggle('selected', c.textContent.trim() === label);
   });
-}
-
-function ajouterChip(inputId) {
-  const label = prompt('Nom du type de mission :');
-  if (!label || !label.trim()) return;
-  const l = label.trim();
-  if (missionTypes.find(t => t.label === l)) { selectChip(inputId, l); return; }
-  const couleur = prompt('Couleur (ex: #E74C3C, #3498DB…)\nLaissez vide pour violet :', '#9B59B6') || '#9B59B6';
-  const hex = couleur.trim().startsWith('#') ? couleur.trim() : '#' + couleur.trim();
-  const bg  = hex + '22';
-  missionTypes.push({ label: l, color: hex, bg });
-  const wrap = document.getElementById(`chips_${inputId}`);
-  if (wrap) wrap.outerHTML = renderChips(inputId, l);
-  selectChip(inputId, l);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1308,7 +1327,19 @@ function renderTabMissions() {
     const chipsHtml = missionTypes.map(t =>
       `<span class="chip${l.mission === t.label ? ' selected' : ''}" style="background:${t.bg};color:${t.color}"
         onclick="selectMissionType(${anneeActive},${idx},'${t.label.replace(/'/g,"\\'")}');event.stopPropagation()">${t.label}</span>`
-    ).join('') + `<span class="chip chip-add" onclick="customMissionType(${anneeActive},${idx});event.stopPropagation()">+ Autre</span>`;
+    ).join('') + `
+      <span class="chip chip-add" id="btnadd_${idx}" onclick="showInlineChipForm(${idx},${anneeActive});event.stopPropagation()">+ Personnalisé</span>
+      <div id="chipinline_${idx}" style="display:none;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap" onclick="event.stopPropagation()">
+        <input id="chipinname_${idx}" type="text" placeholder="Nom…" maxlength="30"
+          style="border:1px solid var(--bord);border-radius:8px;padding:5px 10px;font-size:12px;outline:none;width:150px"
+          onkeydown="if(event.key==='Enter')validerInlineChip(${anneeActive},${idx});if(event.key==='Escape')hideInlineChipForm(${idx})">
+        <input id="chipincol_${idx}" type="color" value="#9B59B6"
+          style="width:32px;height:32px;border:none;border-radius:6px;cursor:pointer;padding:2px">
+        <button onclick="validerInlineChip(${anneeActive},${idx})"
+          style="background:var(--kaki);color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer">OK</button>
+        <button onclick="hideInlineChipForm(${idx})"
+          style="background:none;border:1px solid var(--bord);border-radius:8px;padding:5px 8px;font-size:12px;cursor:pointer;color:var(--doux)">✕</button>
+      </div>`;
     const isaoRow = l.isao > 0 ? `
     <tr class="tr-isao">
       <td style="padding:4px 14px 8px 32px;color:#7B3FA0;font-size:12px;font-weight:600">
@@ -1508,19 +1539,28 @@ async function selectMissionType(annee, idx, label) {
   renderTabMissions();
 }
 
-async function customMissionType(annee, idx) {
-  document.querySelectorAll('[id^="chips_row_"]').forEach(e => e.style.display = 'none');
-  const label = prompt('Nom de la mission :');
-  if (!label || !label.trim()) return;
-  const l = label.trim();
-  // Si déjà existant, sélectionner directement
-  if (missionTypes.find(t => t.label === l)) { await selectMissionType(annee, idx, l); return; }
-  // Choisir une couleur
-  const couleur = prompt('Couleur (ex: #E74C3C, #3498DB, #27AE60…)\nLaissez vide pour violet par défaut :', '#9B59B6') || '#9B59B6';
-  const hex = couleur.trim().startsWith('#') ? couleur.trim() : '#' + couleur.trim();
-  // Générer une version pâle pour le fond
-  const bg = hex + '22'; // transparence 13%
-  missionTypes.push({ label: l, color: hex, bg });
+function showInlineChipForm(idx, annee) {
+  const btn = document.getElementById(`btnadd_${idx}`);
+  const form = document.getElementById(`chipinline_${idx}`);
+  if (btn) btn.style.display = 'none';
+  if (form) { form.style.display = 'flex'; setTimeout(() => document.getElementById(`chipinname_${idx}`)?.focus(), 50); }
+}
+
+function hideInlineChipForm(idx) {
+  const btn = document.getElementById(`btnadd_${idx}`);
+  const form = document.getElementById(`chipinline_${idx}`);
+  if (btn) btn.style.display = '';
+  if (form) form.style.display = 'none';
+}
+
+async function validerInlineChip(annee, idx) {
+  const nameEl = document.getElementById(`chipinname_${idx}`);
+  const colEl  = document.getElementById(`chipincol_${idx}`);
+  const l = nameEl?.value.trim();
+  if (!l) { nameEl?.focus(); return; }
+  const hex = colEl?.value || '#9B59B6';
+  const bg  = hex + '22';
+  if (!missionTypes.find(t => t.label === l)) missionTypes.push({ label: l, color: hex, bg });
   await selectMissionType(annee, idx, l);
 }
 
