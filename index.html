@@ -1169,18 +1169,23 @@ function renderAlertes(rows) {
 
 // ── ONGLET PAIEMENTS ─────────────────────────────────────
 function renderTabPaiements() {
-  const rows = getRows(anneeActive);
   const bms  = getBMS(anneeActive);
 
+  // Toutes les missions liées à des BMS de l'année active (peu importe l'année de la mission)
+  const allRows = Object.values(state).flatMap(s => Array.isArray(s) ? s : (s?.rows || []));
+  const rowsBmsAnnee = allRows.filter(l => String(l.bmsAnnee) === String(anneeActive));
+  // Missions de l'année active sans BMS (pour calcul "en attente")
+  const rowsActives = getRows(anneeActive);
+
   // KPI financiers
-  const percu    = bms.reduce((s,b) => s + (b.net||0), 0);
-  const att      = rows.filter(l => !l.bmsMois && l.statut >= 1 && !l.isaoOnly).reduce((s,l) => s + ((l.joursReels||l.joursTheo||0)*60.385), 0);
+  const percu = bms.reduce((s,b) => s + (b.net||0), 0);
+  const att   = rowsActives.filter(l => !l.bmsMois && l.statut >= 1 && !l.isaoOnly).reduce((s,l) => s + ((l.joursReels||l.joursTheo||0)*60.385), 0);
   document.getElementById('kPercu').textContent = eur(percu);
   document.getElementById('kAtt').textContent   = eur(att);
 
-  // Primes
-  const totalISAO  = rows.reduce((s,l) => s + (l.isao||0), 0);
-  const totalSolde = rows.reduce((s,l) => l.isaoOnly ? s : s + (l.solde||0), 0);
+  // Primes — depuis toutes les missions liées aux BMS de cette année
+  const totalISAO  = rowsBmsAnnee.reduce((s,l) => s + (l.isao||0), 0);
+  const totalSolde = rowsBmsAnnee.reduce((s,l) => l.isaoOnly ? s : s + (l.solde||0), 0);
   const totalAllocBrut = bms.reduce((s,b) => s + (b.alloc||0), 0);
   const totalAllocNet  = Math.round(totalAllocBrut * 0.9047 * 100) / 100;
   const nbMois         = Math.round(totalAllocBrut / 100);
@@ -1192,7 +1197,7 @@ function renderTabPaiements() {
 
   // Détail ISAO : liste des missions avec prime terrain
   const isaoDetail = document.getElementById('pIsaoDetail');
-  const rowsAvecISAO = rows.filter(l => l.isao > 0);
+  const rowsAvecISAO = rowsBmsAnnee.filter(l => l.isao > 0);
   if (rowsAvecISAO.length > 0) {
     isaoDetail.style.display = '';
     isaoDetail.innerHTML = rowsAvecISAO.map(l =>
@@ -1214,7 +1219,7 @@ function renderTabPaiements() {
   emptyBMS.style.display = 'none';
 
   tbody.innerHTML = bms.map(b => {
-    const missionsLiees = rows.filter(l => l.bmsMois === b.mois && l.bmsAnnee === b.annee);
+    const missionsLiees = allRows.filter(l => l.bmsMois === b.mois && String(l.bmsAnnee) === String(b.annee));
     const soldeBrut = missionsLiees.reduce((s,l) => s + (l.solde||0), 0);
     const isaoBrut  = missionsLiees.reduce((s,l) => s + (l.isao||0), 0);
     const noms = missionsLiees.map(l => l.mission || (l.deb + '→' + l.fin)).join(', ') || '—';
