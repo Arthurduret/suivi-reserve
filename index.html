@@ -1307,7 +1307,10 @@ function renderTabMissions() {
     const ec  = l.ecart?.startsWith('⚠️') ? 'warn' : l.ecart?.startsWith('✅') ? 'ok' : l.ecart?.startsWith('ℹ️') ? 'muted' : 'muted';
     const idx = rows.indexOf(l);
     const typeInfo = missionTypes.find(t => t.label === l.mission);
-    const badge = typeInfo ? `<span class="mission-badge" style="background:${typeInfo.bg};color:${typeInfo.color}">${typeInfo.label}</span>` : '';
+    const chipsHtml = missionTypes.map(t =>
+      `<span class="chip${l.mission === t.label ? ' selected' : ''}" style="background:${t.bg};color:${t.color};font-size:11px;padding:3px 9px"
+        onclick="selectMissionType(${anneeActive},${idx},'${t.label.replace(/'/g,"\\'")}');event.stopPropagation()">${t.label}</span>`
+    ).join('') + `<span class="chip chip-add" style="font-size:11px;padding:3px 9px" onclick="customMissionType(${anneeActive},${idx});event.stopPropagation()">+ Autre</span>`;
     const isaoRow = l.isao > 0 ? `
     <tr class="tr-isao">
       <td style="padding:4px 14px 8px 32px;color:#7B3FA0;font-size:12px;font-weight:600">
@@ -1320,7 +1323,18 @@ function renderTabMissions() {
       <td colspan="2"></td>
     </tr>` : '';
     return `<tr>
-      <td class="td-mission">${badge}<input type="text" value="${esc(l.mission||'')}" placeholder="— nommer —" onchange="majMission(${anneeActive},${idx},this.value)"></td>
+      <td class="td-mission" style="min-width:200px">
+        <div style="position:relative">
+          ${typeInfo ? `<span class="mission-badge" style="background:${typeInfo.bg};color:${typeInfo.color};cursor:pointer" onclick="toggleChipsRow(${idx})">${typeInfo.label} ▾</span>`
+            : `<span style="font-size:12px;color:var(--doux);cursor:pointer;font-style:italic" onclick="toggleChipsRow(${idx})">— choisir —</span>`}
+          <input type="text" id="minput_${idx}" value="${esc(l.mission||typeInfo?.label||'')}" placeholder="ou saisir…"
+            style="display:${typeInfo?'none':'inline-block'};border:none;background:transparent;font-size:13px;width:120px;outline:none"
+            onchange="majMission(${anneeActive},${idx},this.value)">
+          <div id="chips_row_${idx}" style="display:none;position:absolute;left:0;top:100%;z-index:50;background:white;border:1px solid var(--bord);border-radius:var(--r);padding:8px;box-shadow:var(--ombre);min-width:320px;flex-wrap:wrap;gap:5px;display:none">
+            <div style="display:flex;flex-wrap:wrap;gap:5px">${chipsHtml}</div>
+          </div>
+        </div>
+      </td>
       <td class="td-date">${l.deb||'—'}</td>
       <td class="td-date">${l.fin||'—'}</td>
       <td class="td-jours">${l.joursTheo||'—'}</td>
@@ -1474,6 +1488,35 @@ async function nettoyer() {
   rafraichir();
   toast(total > 0 ? `🧹 ${total} doublon(s) supprimé(s)` : '✅ Aucun doublon détecté', 'tok');
 }
+// ── Sélection type mission inline ────────────────────────
+function toggleChipsRow(idx) {
+  const el = document.getElementById('chips_row_' + idx);
+  if (!el) return;
+  const visible = el.style.display === 'flex';
+  document.querySelectorAll('[id^="chips_row_"]').forEach(e => e.style.display = 'none');
+  el.style.display = visible ? 'none' : 'flex';
+  if (!visible) {
+    setTimeout(() => document.addEventListener('click', function h() {
+      el.style.display = 'none'; document.removeEventListener('click', h);
+    }), 50);
+  }
+}
+
+async function selectMissionType(annee, idx, label) {
+  document.querySelectorAll('[id^="chips_row_"]').forEach(e => e.style.display = 'none');
+  const rows = getRows(annee);
+  if (rows[idx]) { rows[idx].mission = label; setRows(annee, rows); }
+  try { await sauvegarderSheets(); setSaveStatus(true, 'Sauvegardé'); } catch(e) { setSaveStatus(false, 'Erreur Drive'); }
+  renderTabMissions();
+}
+
+async function customMissionType(annee, idx) {
+  document.querySelectorAll('[id^="chips_row_"]').forEach(e => e.style.display = 'none');
+  const label = prompt('Nom de la mission :');
+  if (!label || !label.trim()) return;
+  await selectMissionType(annee, idx, label.trim());
+}
+
 async function majMission(annee, idx, val) {
   const rows = getRows(annee);
   if (rows[idx]) { rows[idx].mission = val; setRows(annee, rows); }
