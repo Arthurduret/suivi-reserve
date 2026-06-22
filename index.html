@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Réserve — Suivi des Activités</title>
+<title>Réserve — Suivi</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://apis.google.com/js/api.js"></script>
 <script src="https://accounts.google.com/gsi/client"></script>
@@ -34,7 +34,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--fond); color: var(--texte); min-height: 100vh; }
 
-  /* HEADER */
+  /* ── HEADER ── */
   header {
     background: var(--kaki); color: white; padding: 0 24px;
     display: flex; align-items: center; justify-content: space-between;
@@ -46,86 +46,92 @@
   .h-title { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; }
   .h-sub   { font-size: 11px; opacity: 0.7; margin-top: 1px; }
   .h-right { display: flex; align-items: center; gap: 10px; }
+  .annees  { display: flex; gap: 6px; }
+  .btn-annee { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 4px 12px; border-radius: 20px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+  .btn-annee.active, .btn-annee:hover { background: var(--or); border-color: var(--or); color: var(--kaki); font-weight: 700; }
+  .save-indicator { font-size: 11px; padding: 3px 8px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; }
+  .save-indicator.visible { opacity: 1; }
+  .si-ok  { background: rgba(255,255,255,0.2); color: white; }
+  .si-err { background: var(--rouge); color: white; }
 
-  /* BOUTON GOOGLE */
-  .btn-google {
-    display: flex; align-items: center; gap: 8px;
-    background: white; color: #333; border: none;
-    padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 600;
-    cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-    transition: box-shadow 0.2s;
-  }
-  .btn-google:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  /* ── AUTH ── */
+  .btn-google { display: flex; align-items: center; gap: 8px; background: white; color: #333; border: none; padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
   .btn-google img { width: 18px; height: 18px; }
   .user-info { display: flex; align-items: center; gap: 8px; color: white; font-size: 13px; }
   .user-avatar { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.4); }
   .btn-deconnect { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; }
 
-  /* ANNEES */
-  .annees { display: flex; gap: 6px; }
-  .btn-annee { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 4px 12px; border-radius: 20px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
-  .btn-annee.active, .btn-annee:hover { background: var(--or); border-color: var(--or); color: var(--kaki); font-weight: 700; }
-
-  /* MAIN */
+  /* ── MAIN ── */
   main { max-width: 1400px; margin: 0 auto; padding: 24px 20px; display: flex; flex-direction: column; gap: 20px; }
 
-  /* BANNER CONNEXION */
-  .banner-connect {
-    background: linear-gradient(135deg, var(--kaki), var(--kaki-mid));
-    color: white; border-radius: var(--r); padding: 32px;
-    text-align: center;
-  }
+  /* ── BANNER ── */
+  .banner-connect { background: linear-gradient(135deg, var(--kaki), var(--kaki-mid)); color: white; border-radius: var(--r); padding: 32px; text-align: center; }
   .banner-connect h2 { font-size: 22px; margin-bottom: 8px; }
   .banner-connect p  { opacity: 0.8; margin-bottom: 20px; font-size: 14px; }
 
-  /* KPI */
-  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+  /* ── ONGLETS ── */
+  .tabs { display: flex; gap: 4px; background: var(--blanc); border-radius: var(--r); padding: 6px; box-shadow: var(--ombre); }
+  .tab-btn { flex: 1; padding: 10px 16px; border: none; border-radius: 4px; background: transparent; font-size: 14px; font-weight: 600; color: var(--doux); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .tab-btn:hover { background: var(--kaki-pale); color: var(--kaki); }
+  .tab-btn.active { background: var(--kaki); color: white; }
+  .tab-panel { display: none; flex-direction: column; gap: 20px; }
+  .tab-panel.active { display: flex; }
+
+  /* ── KPI ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
   .kpi { background: var(--blanc); border-radius: var(--r); padding: 18px 20px; box-shadow: var(--ombre); border-left: 4px solid var(--kaki-light); }
-  .kpi.kf { border-left-color: var(--or); }
-  .kpi.ko { border-left-color: var(--vert); }
-  .kpi.ka { border-left-color: var(--orange); }
-  .kpi.ke { border-left-color: var(--bleu); }
+  .kpi.kf  { border-left-color: var(--or); }
+  .kpi.ko  { border-left-color: var(--vert); }
+  .kpi.ka  { border-left-color: var(--orange); }
+  .kpi.ke  { border-left-color: var(--bleu); }
+  .kpi.ki  { border-left-color: #9B59B6; }
   .kpi-label { font-size: 11px; font-weight: 600; color: var(--doux); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
   .kpi-val   { font-size: 28px; font-weight: 800; color: var(--kaki); line-height: 1; }
   .kpi-sub   { font-size: 12px; color: var(--doux); margin-top: 4px; }
   .badge { display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-  .b-ok  { background: var(--vert-pale);  color: var(--vert); }
-  .b-warn{ background: var(--ora-pale);   color: var(--orange); }
+  .b-ok   { background: var(--vert-pale); color: var(--vert); }
+  .b-warn { background: var(--ora-pale);  color: var(--orange); }
 
-  /* BARRE FIDERES */
+  /* ── FIDERES ── */
   .fideres-wrap { background: var(--blanc); border-radius: var(--r); padding: 16px 20px; box-shadow: var(--ombre); }
   .fideres-hdr  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .fideres-hdr span { font-size: 13px; font-weight: 700; color: var(--kaki); }
-  .fideres-count{ font-size: 13px; color: var(--doux); }
-  .fideres-track{ height: 12px; background: var(--fond); border-radius: 6px; overflow: hidden; }
-  .fideres-fill { height: 100%; border-radius: 6px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); background: linear-gradient(90deg, var(--kaki-mid), var(--kaki-light)); }
+  .fideres-count { font-size: 13px; color: var(--doux); }
+  .fideres-track { height: 12px; background: var(--fond); border-radius: 6px; overflow: hidden; }
+  .fideres-fill  { height: 100%; border-radius: 6px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); background: linear-gradient(90deg, var(--kaki-mid), var(--kaki-light)); }
   .fideres-fill.done { background: linear-gradient(90deg, var(--vert), #4CAF50); }
 
-  /* UPLOAD */
-  .upload-wrap { background: var(--blanc); border-radius: var(--r); box-shadow: var(--ombre); padding: 20px; }
+  /* ── ALERTES ── */
+  .alertes-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .alerte { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--r); font-size: 13px; }
+  .alerte-err  { background: var(--rouge-pale); border-left: 4px solid var(--rouge); color: #7A1A1A; }
+  .alerte-warn { background: var(--ora-pale);   border-left: 4px solid var(--orange); color: #7A3A00; }
+  .alerte-info { background: var(--bleu-pale);  border-left: 4px solid var(--bleu);  color: #0A2A4A; }
+  .alerte b { font-weight: 700; }
+
+  /* ── CARD ── */
+  .card { background: var(--blanc); border-radius: var(--r); box-shadow: var(--ombre); overflow: hidden; }
+  .card-hdr { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--fond); }
+  .card-hdr h2 { font-size: 14px; font-weight: 700; color: var(--kaki); }
+  .card-body { padding: 20px; }
   .section-title { font-size: 14px; font-weight: 700; color: var(--kaki); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+
+  /* ── UPLOAD ── */
   .upload-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .upload-card { display: flex; flex-direction: column; gap: 6px; }
   .upload-zone { border: 2px dashed var(--bord); border-radius: var(--r); padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--fond); }
   .upload-zone:hover, .upload-zone.over { border-color: var(--kaki-light); background: var(--kaki-pale); }
   .upload-zone .uz-icon  { font-size: 28px; margin-bottom: 8px; }
   .upload-zone .uz-title { font-size: 13px; font-weight: 700; color: var(--kaki); }
   .upload-zone .uz-sub   { font-size: 11px; color: var(--doux); margin-top: 4px; }
   .upload-zone input     { display: none; }
-  .upload-card { display: flex; flex-direction: column; gap: 6px; }
-  .btn-drive {
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-    background: white; border: 1px solid #DDD; border-radius: var(--r);
-    padding: 8px; font-size: 12px; font-weight: 600; color: #444;
-    cursor: pointer; transition: all 0.2s;
-  }
+  .btn-drive { display: flex; align-items: center; justify-content: center; gap: 6px; background: white; border: 1px solid #DDD; border-radius: var(--r); padding: 8px; font-size: 12px; font-weight: 600; color: #444; cursor: pointer; transition: all 0.2s; }
   .btn-drive:hover { background: #F0F7FF; border-color: #4285F4; color: #4285F4; }
-
-  /* DRIVE STATUS */
   .drive-status { font-size: 12px; margin-top: 10px; padding: 8px 12px; border-radius: 4px; }
   .ds-ok   { background: var(--vert-pale); color: var(--vert); }
   .ds-warn { background: var(--ora-pale);  color: var(--orange); }
 
-  /* MODAL */
+  /* ── MODAL ── */
   .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
   .overlay.show { display: flex; }
   .modal { background: var(--blanc); border-radius: 10px; padding: 28px; max-width: 560px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
@@ -138,83 +144,77 @@
   .fg input:focus { border-color: var(--kaki-light); }
   .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .actions { display: flex; gap: 10px; justify-content: flex-end; }
-  .btn  { padding: 10px 20px; border-radius: var(--r); font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
-  .btn-p { background: var(--kaki);  color: white; }
+  .btn   { padding: 10px 20px; border-radius: var(--r); font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+  .btn-p { background: var(--kaki); color: white; }
   .btn-p:hover { background: var(--kaki-mid); }
   .btn-s { background: var(--fond); color: var(--texte); border: 1px solid var(--bord); }
   .btn-s:hover { background: var(--bord); }
 
-  /* TABLE */
-  .table-wrap-outer { background: var(--blanc); border-radius: var(--r); box-shadow: var(--ombre); overflow: hidden; }
-  .table-hdr { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--bord); }
-  .table-hdr h2 { font-size: 14px; font-weight: 700; color: var(--kaki); }
+  /* ── TABLE ── */
   .table-scroll { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   thead tr { background: var(--kaki); color: white; }
   thead th { padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap; }
+  thead th.sortable { cursor: pointer; user-select: none; }
+  thead th.sortable:hover { background: var(--kaki-mid); }
   tbody tr { border-bottom: 1px solid var(--fond); transition: background 0.15s; }
   tbody tr:hover { background: var(--kaki-pale); }
   tbody td { padding: 10px 14px; vertical-align: middle; }
+  tfoot tr { background: var(--kaki-pale); font-weight: 700; border-top: 2px solid var(--bord); }
+  tfoot td { padding: 10px 14px; font-size: 13px; }
   .td-mission input { border: none; background: transparent; font-weight: 600; font-size: 13px; width: 100%; color: var(--texte); outline: none; cursor: pointer; min-width: 120px; }
   .td-mission input:focus { background: var(--kaki-pale); border-radius: 3px; padding: 2px 4px; }
   .td-date  { white-space: nowrap; color: var(--doux); font-size: 12px; }
   .td-jours { text-align: center; font-weight: 700; }
   .td-mont  { text-align: right; font-family: monospace; }
-  .statut   { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .statut  { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
   .s1 { background: #E8E8E8; color: #555; }
   .s2 { background: var(--bleu-pale); color: var(--bleu); }
   .s3 { background: var(--vert-pale); color: var(--vert); }
   .ok   { color: var(--vert);   font-size: 12px; }
   .warn { color: var(--orange); font-size: 12px; font-weight: 700; }
   .err  { color: var(--rouge);  font-size: 12px; font-weight: 700; }
-  .muted{ color: var(--doux);   font-size: 11px; }
+  .muted { color: var(--doux);  font-size: 11px; }
   .btn-sm  { padding: 4px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; border: none; font-weight: 600; }
   .btn-del { background: var(--rouge-pale); color: var(--rouge); }
 
-  /* EMPTY */
+  /* ── PRIME DETAIL ── */
+  .prime-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .prime-card { border-radius: var(--r); padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; }
+  .prime-card.pc-isao  { background: #F3E8FF; border-left: 4px solid #9B59B6; }
+  .prime-card.pc-etud  { background: var(--bleu-pale); border-left: 4px solid var(--bleu); }
+  .prime-card.pc-total { background: var(--vert-pale); border-left: 4px solid var(--vert); }
+  .prime-card.pc-att   { background: var(--ora-pale);  border-left: 4px solid var(--orange); }
+  .pc-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--doux); }
+  .pc-val   { font-size: 24px; font-weight: 800; color: var(--kaki); }
+  .pc-sub   { font-size: 12px; color: var(--doux); }
+
+  /* ── EMPTY ── */
   .empty { padding: 48px 20px; text-align: center; color: var(--doux); }
   .empty-icon  { font-size: 40px; margin-bottom: 12px; }
   .empty-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
 
-  /* ALERTES */
-  .alertes-wrap { display: flex; flex-direction: column; gap: 8px; }
-  .alerte { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--r); font-size: 13px; }
-  .alerte-err  { background: var(--rouge-pale); border-left: 4px solid var(--rouge); color: #7A1A1A; }
-  .alerte-warn { background: var(--ora-pale);   border-left: 4px solid var(--orange); color: #7A3A00; }
-  .alerte-info { background: var(--bleu-pale);  border-left: 4px solid var(--bleu);  color: #0A2A4A; }
-  .alerte-ok   { background: var(--vert-pale);  border-left: 4px solid var(--vert);  color: #0A3A1A; }
-  .alerte b { font-weight: 700; }
-
-  /* TFOOT */
-  tfoot tr { background: var(--kaki-pale); font-weight: 700; border-top: 2px solid var(--bord); }
-  tfoot td { padding: 10px 14px; font-size: 13px; }
-
-  /* SAVE STATUS */
-  .save-indicator { font-size: 11px; padding: 3px 8px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; }
-  .save-indicator.visible { opacity: 1; }
-  .si-ok   { background: rgba(255,255,255,0.2); color: white; }
-  .si-err  { background: var(--rouge); color: white; }
-
-  /* TOAST */
+  /* ── TOAST ── */
   .toast { position: fixed; bottom: 24px; right: 24px; background: var(--kaki); color: white; padding: 14px 20px; border-radius: var(--r); font-size: 14px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.2); transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 300; max-width: 340px; }
   .toast.show { transform: translateY(0); opacity: 1; }
   .toast.tok  { background: var(--vert); }
   .toast.terr { background: var(--rouge); }
 
-  /* PROC OVERLAY */
+  /* ── PROC ── */
   .proc { display: none; position: fixed; inset: 0; background: rgba(61,74,31,0.88); z-index: 250; align-items: center; justify-content: center; flex-direction: column; color: white; gap: 16px; }
   .proc.show { display: flex; }
   .proc-text { font-size: 16px; font-weight: 600; }
   .spin-lg { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.3); border-top-color: var(--or); border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── NOTE INFO ── */
+  .note-info { padding: 12px 20px; background: var(--or-pale); border-top: 1px solid var(--bord); font-size: 12px; color: #7A5800; }
 </style>
 </head>
 <body>
 
-<!-- PROCESSING -->
 <div class="proc" id="proc"><div class="spin-lg"></div><div class="proc-text" id="procTxt">Chargement…</div></div>
 
-<!-- MODAL -->
 <div class="overlay" id="overlay">
   <div class="modal">
     <h3 id="mTitle">Confirmer</h3>
@@ -227,10 +227,8 @@
   </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- HEADER -->
 <header>
   <div class="h-left">
     <span class="h-logo">🎖️</span>
@@ -251,9 +249,8 @@
   </div>
 </header>
 
-<main id="main">
+<main>
 
-  <!-- BANNER NON CONNECTÉ -->
   <div class="banner-connect" id="bannerConnect">
     <h2>🔐 Connectez votre Google Drive</h2>
     <p>Vos documents sont sauvegardés sur votre Drive personnel.<br>Vos données ne transitent par aucun serveur externe.</p>
@@ -263,167 +260,230 @@
     </button>
   </div>
 
-  <!-- CONTENU (masqué avant connexion) -->
   <div id="appContent" style="display:none;flex-direction:column;gap:20px">
 
-    <!-- KPI -->
-    <div class="kpi-grid">
-      <div class="kpi">
-        <div class="kpi-label">Jours — Année civile</div>
-        <div class="kpi-val" id="kJours">0</div>
-        <div class="kpi-sub" id="kJoursSub">janv. → déc.</div>
-      </div>
-      <div class="kpi" style="border-left-color:var(--bleu)">
-        <div class="kpi-label">Jours — Année scolaire</div>
-        <div class="kpi-val" id="kJoursScol">0</div>
-        <div class="kpi-sub" id="kJoursScolSub">sept. → août</div>
-      </div>
-      <div class="kpi kf">
-        <div class="kpi-label">Prime FIDERES</div>
-        <div class="kpi-val" id="kFidVal">0/37</div>
-        <div id="kFidBadge"></div>
-      </div>
-      <div class="kpi ko">
-        <div class="kpi-label">Total perçu</div>
-        <div class="kpi-val" id="kPercu">0 €</div>
-        <div class="kpi-sub">missions payées</div>
-      </div>
-      <div class="kpi ka">
-        <div class="kpi-label">En attente</div>
-        <div class="kpi-val" id="kAtt">0 €</div>
-        <div class="kpi-sub">solde non payée</div>
-      </div>
-      <div class="kpi ke">
-        <div class="kpi-label">Prime étudiante</div>
-        <div class="kpi-val" id="kEtud">0 €</div>
-        <div class="kpi-sub" id="kEtudSub"></div>
-      </div>
+    <!-- ONGLETS -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="changerTab('missions')" id="tab-missions">📅 Missions & Jours</button>
+      <button class="tab-btn" onclick="changerTab('paiements')" id="tab-paiements">💰 Paiements & Primes</button>
+      <button class="tab-btn" onclick="changerTab('documents')" id="tab-documents">📤 Documents</button>
     </div>
 
-    <!-- FIDERES -->
-    <div class="fideres-wrap">
-      <div class="fideres-hdr">
-        <span>🎯 Progression FIDERES</span>
-        <span class="fideres-count" id="fCount">0 / 37 jours</span>
-      </div>
-      <div class="fideres-track"><div class="fideres-fill" id="fFill" style="width:0%"></div></div>
-    </div>
+    <!-- ══════════════════════════════════════
+         ONGLET 1 — MISSIONS & JOURS
+    ══════════════════════════════════════ -->
+    <div class="tab-panel active" id="panel-missions">
 
-    <!-- UPLOAD -->
-    <div class="upload-wrap">
-      <div class="section-title">📤 Importer un document PDF</div>
-      <div class="upload-grid">
-        <!-- Zone upload avec double option : local OU Drive -->
-        <div class="upload-card">
-          <div class="upload-zone" onclick="document.getElementById('fConv').click()" id="dzConv">
-            <div class="uz-icon">📋</div>
-            <div class="uz-title">Convocation</div>
-            <div class="uz-sub">Depuis mon ordinateur</div>
-            <input type="file" id="fConv" accept=".pdf" onchange="onFile(this,'CONVOCATION')">
+      <!-- KPI jours -->
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-label">Jours — Année civile</div>
+          <div class="kpi-val" id="kJours">0</div>
+          <div class="kpi-sub" id="kJoursSub">janv. → déc.</div>
+        </div>
+        <div class="kpi" style="border-left-color:var(--bleu)">
+          <div class="kpi-label">Jours — Année scolaire</div>
+          <div class="kpi-val" id="kJoursScol">0</div>
+          <div class="kpi-sub" id="kJoursScolSub">sept. → août</div>
+        </div>
+        <div class="kpi kf">
+          <div class="kpi-label">Prime FIDERES</div>
+          <div class="kpi-val" id="kFidVal">0/37</div>
+          <div id="kFidBadge"></div>
+        </div>
+      </div>
+
+      <!-- Barre FIDERES -->
+      <div class="fideres-wrap">
+        <div class="fideres-hdr">
+          <span>🎯 Progression FIDERES (année civile)</span>
+          <span class="fideres-count" id="fCount">0 / 37 jours</span>
+        </div>
+        <div class="fideres-track"><div class="fideres-fill" id="fFill" style="width:0%"></div></div>
+      </div>
+
+      <!-- Alertes -->
+      <div class="card" id="alertesWrap" style="display:none">
+        <div class="card-hdr"><h2>⚠️ Alertes</h2></div>
+        <div class="card-body"><div class="alertes-wrap" id="alertesContent"></div></div>
+      </div>
+
+      <!-- Tableau missions -->
+      <div class="card">
+        <div class="card-hdr">
+          <h2>📅 Activités <span id="anneeLabel" style="color:var(--doux);font-weight:400;font-size:13px"></span></h2>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-s btn-sm" onclick="exportCSV()" style="font-size:12px;padding:6px 12px">⬇️ CSV</button>
+            <button class="btn btn-s btn-sm" onclick="ajouterManuel()" style="font-size:12px;padding:6px 12px">+ Ajouter</button>
           </div>
-          <button class="btn-drive" onclick="ouvrirPicker('CONVOCATION')">
-            <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png" width="16"> Depuis Drive
-          </button>
         </div>
-        <div class="upload-card">
-          <div class="upload-zone" onclick="document.getElementById('fASF').click()" id="dzASF">
-            <div class="uz-icon">✅</div>
-            <div class="uz-title">État de Service</div>
-            <div class="uz-sub">Depuis mon ordinateur</div>
-            <input type="file" id="fASF" accept=".pdf" onchange="onFile(this,'ASF')">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Mission</th>
+                <th class="sortable" onclick="sortTable('deb')">Début ↕</th>
+                <th>Fin</th>
+                <th>J. Théo</th>
+                <th>J. Réels</th>
+                <th>Écart</th>
+                <th class="sortable" onclick="sortTable('statut')">Statut ↕</th>
+                <th>Ref. OM</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+            <tfoot id="tfoot" style="display:none">
+              <tr>
+                <td colspan="3">TOTAL</td>
+                <td class="td-jours" id="ftJTheo">—</td>
+                <td class="td-jours" id="ftJReels">—</td>
+                <td colspan="4"></td>
+              </tr>
+            </tfoot>
+          </table>
+          <div class="empty" id="emptyState" style="display:none">
+            <div class="empty-icon">🪖</div>
+            <div class="empty-title">Aucune activité pour cette année</div>
+            <div>Importez vos PDFs ou ajoutez une ligne manuellement.</div>
           </div>
-          <button class="btn-drive" onclick="ouvrirPicker('ASF')">
-            <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png" width="16"> Depuis Drive
-          </button>
         </div>
-        <div class="upload-card">
-          <div class="upload-zone" onclick="document.getElementById('fBMS').click()" id="dzBMS">
-            <div class="uz-icon">💰</div>
-            <div class="uz-title">Bulletin de Solde</div>
-            <div class="uz-sub">Depuis mon ordinateur</div>
-            <input type="file" id="fBMS" accept=".pdf" onchange="onFile(this,'BMS')">
+      </div>
+
+    </div><!-- /panel-missions -->
+
+    <!-- ══════════════════════════════════════
+         ONGLET 2 — PAIEMENTS & PRIMES
+    ══════════════════════════════════════ -->
+    <div class="tab-panel" id="panel-paiements">
+
+      <!-- Résumé financier -->
+      <div class="kpi-grid">
+        <div class="kpi ko">
+          <div class="kpi-label">Total reçu (net)</div>
+          <div class="kpi-val" id="kPercu">0 €</div>
+          <div class="kpi-sub">somme des NET BMS virés</div>
+        </div>
+        <div class="kpi ka">
+          <div class="kpi-label">En attente</div>
+          <div class="kpi-val" id="kAtt">0 €</div>
+          <div class="kpi-sub">missions non encore payées</div>
+        </div>
+      </div>
+
+      <!-- Détail des primes -->
+      <div class="card">
+        <div class="card-hdr"><h2>🏅 Détail des primes reçues</h2></div>
+        <div class="card-body">
+          <div class="prime-grid">
+            <div class="prime-card pc-isao">
+              <div class="pc-label">ISAO — Terrain</div>
+              <div class="pc-val" id="pIsao">0 €</div>
+              <div class="pc-sub">brut (prime de campagne)</div>
+            </div>
+            <div class="prime-card pc-etud">
+              <div class="pc-label">Prime étudiante</div>
+              <div class="pc-val" id="pEtud">0 €</div>
+              <div class="pc-sub" id="pEtudSub">0 mois × 90,47 € net</div>
+            </div>
+            <div class="prime-card pc-total">
+              <div class="pc-label">Solde brute ENSAP</div>
+              <div class="pc-val" id="pSolde">0 €</div>
+              <div class="pc-sub">total brut missions</div>
+            </div>
           </div>
-          <button class="btn-drive" onclick="ouvrirPicker('BMS')">
-            <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png" width="16"> Depuis Drive
-          </button>
+          <div class="note-info" style="border-radius:var(--r)">
+            ℹ️ Prime étudiante : 100 € brut → 90,47 € net/mois (après CSG/CRDS 9,53 %).
+            L'ISAO est une prime de terrain versée en plus de la solde pour les mêmes jours de mission.
+          </div>
         </div>
       </div>
-      <div id="driveStatus"></div>
-    </div>
 
-    <!-- ALERTES PAIEMENT -->
-    <div class="table-wrap-outer" id="alertesWrap" style="display:none">
-      <div class="table-hdr">
-        <h2>⚠️ Alertes</h2>
-      </div>
-      <div style="padding:16px 20px">
-        <div class="alertes-wrap" id="alertesContent"></div>
-      </div>
-    </div>
-
-    <!-- TABLEAU -->
-    <div class="table-wrap-outer">
-      <div class="table-hdr">
-        <h2>📅 Activités <span id="anneeLabel" style="color:var(--doux);font-weight:400;font-size:13px"></span></h2>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-s btn-sm" onclick="exportCSV()" style="font-size:12px;padding:6px 12px">⬇️ Export CSV</button>
-          <button class="btn btn-s btn-sm" onclick="ajouterManuel()" style="font-size:12px;padding:6px 12px">+ Ajouter</button>
+      <!-- BMS reçus -->
+      <div class="card" id="bmsSectionWrap">
+        <div class="card-hdr">
+          <h2>📄 Bulletins de Solde <span id="anneeLabel2" style="color:var(--doux);font-weight:400;font-size:13px"></span></h2>
+          <span style="font-size:12px;color:var(--doux)">NET À PAYER = montant viré sur le compte</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Mois</th>
+                <th>NET À PAYER</th>
+                <th>Solde brute</th>
+                <th>ISAO brut</th>
+                <th>Alloc. études (brut)</th>
+                <th>Missions couvertes</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyBMS"></tbody>
+          </table>
+          <div class="empty" id="emptyBMS" style="display:none">
+            <div class="empty-icon">💰</div>
+            <div class="empty-title">Aucun bulletin de solde pour cette année</div>
+            <div>Importez vos BMS dans l'onglet Documents.</div>
+          </div>
         </div>
       </div>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Mission</th><th style="cursor:pointer" onclick="sortTable('deb')">Début ↕</th><th>Fin</th>
-              <th>J.Théo</th><th>J.Réels</th><th>Écart</th>
-              <th style="cursor:pointer" onclick="sortTable('statut')">Statut ↕</th><th>Solde Brute ENSAP</th><th>ISAO Brut</th>
-              <th>BMS lié</th><th>Vérif. Paye</th><th></th>
-            </tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-          <tfoot id="tfoot" style="display:none">
-            <tr>
-              <td colspan="3">TOTAL</td>
-              <td class="td-jours" id="ftJTheo">—</td>
-              <td class="td-jours" id="ftJReels">—</td>
-              <td colspan="2"></td>
-              <td class="td-mont" id="ftSolde">—</td>
-              <td class="td-mont" id="ftISAO">—</td>
-              <td colspan="3"></td>
-            </tr>
-          </tfoot>
-        </table>
-        <div class="empty" id="emptyState" style="display:none">
-          <div class="empty-icon">🪖</div>
-          <div class="empty-title">Aucune activité pour cette année</div>
-          <div>Importez vos PDFs ou ajoutez une ligne manuellement.</div>
+
+    </div><!-- /panel-paiements -->
+
+    <!-- ══════════════════════════════════════
+         ONGLET 3 — DOCUMENTS
+    ══════════════════════════════════════ -->
+    <div class="tab-panel" id="panel-documents">
+
+      <div class="card">
+        <div class="card-hdr"><h2>📤 Importer un document PDF</h2></div>
+        <div class="card-body">
+          <div class="upload-grid">
+            <div class="upload-card">
+              <div class="upload-zone" onclick="document.getElementById('fConv').click()" id="dzConv">
+                <div class="uz-icon">📋</div>
+                <div class="uz-title">Convocation</div>
+                <div class="uz-sub">Depuis mon ordinateur</div>
+                <input type="file" id="fConv" accept=".pdf" onchange="onFile(this,'CONVOCATION')">
+              </div>
+              <button class="btn-drive" onclick="ouvrirPicker('CONVOCATION')">
+                <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png" width="16"> Depuis Drive
+              </button>
+            </div>
+            <div class="upload-card">
+              <div class="upload-zone" onclick="document.getElementById('fASF').click()" id="dzASF">
+                <div class="uz-icon">✅</div>
+                <div class="uz-title">État de Service Fait</div>
+                <div class="uz-sub">Depuis mon ordinateur</div>
+                <input type="file" id="fASF" accept=".pdf" onchange="onFile(this,'ASF')">
+              </div>
+              <button class="btn-drive" onclick="ouvrirPicker('ASF')">
+                <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png" width="16"> Depuis Drive
+              </button>
+            </div>
+            <div class="upload-card">
+              <div class="upload-zone" onclick="document.getElementById('fBMS').click()" id="dzBMS">
+                <div class="uz-icon">💰</div>
+                <div class="uz-title">Bulletin de Solde (BMS)</div>
+                <div class="uz-sub">Depuis mon ordinateur</div>
+                <input type="file" id="fBMS" accept=".pdf" onchange="onFile(this,'BMS')">
+              </div>
+              <button class="btn-drive" onclick="ouvrirPicker('BMS')">
+                <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png" width="16"> Depuis Drive
+              </button>
+            </div>
+          </div>
+          <div id="driveStatus"></div>
         </div>
       </div>
-    </div>
 
-    <!-- SECTION BMS REÇUS -->
-    <div class="table-wrap-outer" id="bmsSectionWrap" style="display:none">
-      <div class="table-hdr">
-        <h2>💰 Bulletins de Solde reçus <span id="anneeLabel2" style="color:var(--doux);font-weight:400;font-size:13px"></span></h2>
-        <span style="font-size:12px;color:var(--doux)">NET À PAYER = ce qui est viré sur votre compte</span>
+      <div class="card">
+        <div class="card-hdr"><h2>☁️ Stockage Google Drive</h2></div>
+        <div class="card-body">
+          <div id="driveInfo" style="font-size:13px;color:var(--doux)">Connectez votre compte Google pour voir l'état du stockage.</div>
+        </div>
       </div>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Mois BMS</th>
-              <th>NET À PAYER (viré)</th>
-              <th>dont Alloc. Études (brut)</th>
-              <th>Missions couvertes</th>
-            </tr>
-          </thead>
-          <tbody id="tbodyBMS"></tbody>
-        </table>
-      </div>
-      <div style="padding:12px 20px;background:var(--or-pale);border-top:1px solid var(--bord);font-size:12px;color:#7A5800">
-        ℹ️ Prime étudiante : 100€ brut → 90,47€ net/mois (après CSG/CRDS). Regroupement possible (ex: 400€ brut = 4 mois × 90,47€ = 361,88€ net).
-      </div>
-    </div>
+
+    </div><!-- /panel-documents -->
 
   </div><!-- /appContent -->
 </main>
@@ -432,10 +492,10 @@
 // ════════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════════
-const CLIENT_ID   = '197968067540-baqvr87ns21eaijuk86kaesnjtkbeh4d.apps.googleusercontent.com';
-const SCOPES      = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets';
-const SHEET_NAME  = 'Suivi Réserve — Données';
-const DRIVE_FOLDER= 'Suivi Réserve';
+const CLIENT_ID    = '197968067540-baqvr87ns21eaijuk86kaesnjtkbeh4d.apps.googleusercontent.com';
+const SCOPES       = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets';
+const SHEET_NAME   = 'Suivi Réserve — Données';
+const DRIVE_FOLDER = 'Suivi Réserve';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -443,18 +503,34 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 // ════════════════════════════════════════════════════════════
 //  STATE
 // ════════════════════════════════════════════════════════════
-let accessToken  = null;
-let sheetId      = null;
-let driveFolderId= null;
-let state        = {};  // state[annee].rows = lignes missions
-let bmsState     = {};  // bmsState[annee] = liste des BMS reçus { mois, annee, net, alloc }
-let anneeActive  = new Date().getFullYear();
-let modalPending = null;
+let accessToken   = null;
+let sheetId       = null;
+let driveFolderId = null;
+let state         = {};   // state[annee].rows = lignes missions
+let bmsState      = {};   // bmsState[annee]   = liste des BMS { mois, annee, net, alloc }
+let anneeActive   = new Date().getFullYear();
+let tabActive     = 'missions';
+let modalPending  = null;
 
 function getRows(y) { const s = state[y]; if (!s) return []; return Array.isArray(s) ? s : (s.rows || []); }
 function setRows(y, rows) { if (!state[y] || Array.isArray(state[y])) state[y] = {}; state[y].rows = rows; }
 function getBMS(y)  { return bmsState[y] || []; }
-function addBMS(y, bms) { if (!bmsState[y]) bmsState[y] = []; const idx = bmsState[y].findIndex(b => b.mois === bms.mois && b.annee === bms.annee); if (idx !== -1) bmsState[y][idx] = bms; else bmsState[y].push(bms); }
+function addBMS(y, bms) {
+  if (!bmsState[y]) bmsState[y] = [];
+  const idx = bmsState[y].findIndex(b => b.mois === bms.mois && b.annee === bms.annee);
+  if (idx !== -1) bmsState[y][idx] = bms; else bmsState[y].push(bms);
+}
+
+// ════════════════════════════════════════════════════════════
+//  NAVIGATION ONGLETS
+// ════════════════════════════════════════════════════════════
+function changerTab(tab) {
+  tabActive = tab;
+  ['missions','paiements','documents'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('panel-' + t).classList.toggle('active', t === tab);
+  });
+}
 
 // ════════════════════════════════════════════════════════════
 //  AUTH GOOGLE
@@ -478,7 +554,6 @@ function signOut() {
 }
 
 function checkAuth() {
-  // Récupère le token depuis l'URL (retour OAuth)
   const hash = window.location.hash.substring(1);
   if (hash.includes('access_token')) {
     const p = new URLSearchParams(hash);
@@ -503,17 +578,14 @@ async function getUserInfo() {
 }
 
 // ════════════════════════════════════════════════════════════
-//  GOOGLE DRIVE — Sauvegarde des PDFs
+//  GOOGLE DRIVE
 // ════════════════════════════════════════════════════════════
 async function getOrCreateFolder() {
-  // Cherche le dossier existant
   const q = encodeURIComponent(`name='${DRIVE_FOLDER}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
   const r = await gFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
   if (r.files && r.files.length > 0) { driveFolderId = r.files[0].id; return; }
-  // Crée le dossier
   const cr = await gFetch('https://www.googleapis.com/drive/v3/files', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: DRIVE_FOLDER, mimeType: 'application/vnd.google-apps.folder' })
   });
   driveFolderId = cr.id;
@@ -526,35 +598,24 @@ async function uploaderPDFDrive(file) {
   form.append('metadata', new Blob([meta], { type: 'application/json' }));
   form.append('file', file);
   const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-    method : 'POST',
-    headers: { Authorization: 'Bearer ' + accessToken },
-    body   : form
+    method: 'POST', headers: { Authorization: 'Bearer ' + accessToken }, body: form
   });
   const data = await r.json();
   return data.id;
 }
 
 // ════════════════════════════════════════════════════════════
-//  GOOGLE SHEETS — Persistance des données
+//  GOOGLE SHEETS
 // ════════════════════════════════════════════════════════════
 async function getOrCreateSheet() {
   const saved = localStorage.getItem('sheetId');
   if (saved) { sheetId = saved; return; }
-
-  // Cherche une feuille existante
   const q = encodeURIComponent(`name='${SHEET_NAME}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`);
   const r = await gFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
-  if (r.files && r.files.length > 0) {
-    sheetId = r.files[0].id;
-    localStorage.setItem('sheetId', sheetId);
-    return;
-  }
-
-  // Crée la feuille
+  if (r.files && r.files.length > 0) { sheetId = r.files[0].id; localStorage.setItem('sheetId', sheetId); return; }
   const cr = await gFetch('https://www.googleapis.com/drive/v3/files', {
-    method : 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body   : JSON.stringify({ name: SHEET_NAME, mimeType: 'application/vnd.google-apps.spreadsheet' })
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: SHEET_NAME, mimeType: 'application/vnd.google-apps.spreadsheet' })
   });
   sheetId = cr.id;
   localStorage.setItem('sheetId', sheetId);
@@ -563,29 +624,26 @@ async function getOrCreateSheet() {
 async function chargerDepuisSheets() {
   if (!sheetId) return;
   try {
-    // ── Charger lignes missions ────────────────────────────
     const r = await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Données!A1:Z2000`);
     if (r.values && r.values.length >= 2) {
       const headers = r.values[0];
       state = {};
       r.values.slice(1).forEach(row => {
-        if (!row.some(c => c)) return; // ligne vide
+        if (!row.some(c => c)) return;
         const obj = {};
         headers.forEach((h, i) => obj[h] = row[i] || '');
         const annee = parseInt(obj.deb?.split('/')[2]) || anneeActive;
         if (!state[annee]) state[annee] = { rows: [] };
-        if (!state[annee].rows) state[annee].rows = [];
         obj.joursTheo  = obj.joursTheo  ? parseInt(obj.joursTheo)  : null;
         obj.joursReels = obj.joursReels ? parseInt(obj.joursReels) : null;
         obj.solde      = parseFloat(obj.solde)  || 0;
         obj.isao       = parseFloat(obj.isao)   || 0;
         obj.statut     = parseInt(obj.statut)   || 1;
+        obj.isaoOnly   = obj.isaoOnly === 'true';
         obj.id         = obj.id || Date.now() + Math.random();
         state[annee].rows.push(obj);
       });
     }
-
-    // ── Charger BMS ───────────────────────────────────────
     try {
       const rb = await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/BMS!A1:Z1000`);
       if (rb.values && rb.values.length >= 2) {
@@ -603,64 +661,48 @@ async function chargerDepuisSheets() {
           bmsState[annee].push(obj);
         });
       }
-    } catch(e) { console.log('BMS sheet non trouvé, normal au premier run'); }
-
+    } catch(e) {}
   } catch(e) { console.log('Sheets lecture:', e); }
 }
 
 async function sauvegarderSheets() {
   if (!sheetId) {
-    // Fallback localStorage si pas connecté
     localStorage.setItem('reserveData', JSON.stringify(state));
     localStorage.setItem('reserveBMS',  JSON.stringify(bmsState));
     return;
   }
-
-  // ── Onglet Données (lignes missions) ──────────────────────
-  const headers = ['id','mission','deb','fin','joursTheo','joursReels','dateValid','ecart','statut','solde','isao','bmsMois','bmsAnnee','code','ref'];
+  const headers = ['id','mission','deb','fin','joursTheo','joursReels','dateValid','ecart','statut','solde','isao','isaoOnly','bmsMois','bmsAnnee','code','ref'];
   const rows = [headers];
-  Object.entries(state).forEach(([annee, anneeData]) => {
+  Object.entries(state).forEach(([, anneeData]) => {
     const lignes = anneeData?.rows || anneeData || [];
     lignes.forEach(l => rows.push(headers.map(h => l[h] ?? '')));
   });
-
-  // ── Onglet BMS (bulletins de solde) ───────────────────────
   const bmsCols = ['mois','annee','net','alloc'];
   const bmsRows = [bmsCols];
-  Object.values(bmsState).flat().forEach(b => {
-    bmsRows.push(bmsCols.map(h => b[h] ?? ''));
-  });
+  Object.values(bmsState).flat().forEach(b => bmsRows.push(bmsCols.map(h => b[h] ?? '')));
 
-  // Créer les onglets si nécessaire + écrire
   for (const [titre, data] of [['Données', rows], ['BMS', bmsRows]]) {
     try {
       await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(titre)}!A1:Z2000:clear`, { method: 'POST' });
     } catch(e) {
       try {
         await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
-          method : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body   : JSON.stringify({ requests: [{ addSheet: { properties: { title: titre } } }] })
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requests: [{ addSheet: { properties: { title: titre } } }] })
         });
       } catch(e2) {}
     }
     await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(titre)}!A1?valueInputOption=RAW`, {
-      method : 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body   : JSON.stringify({ values: data })
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: data })
     });
   }
-
-  // Backup localStorage aussi
   localStorage.setItem('reserveData', JSON.stringify(state));
   localStorage.setItem('reserveBMS',  JSON.stringify(bmsState));
 }
 
 async function gFetch(url, opts = {}) {
-  const r = await fetch(url, {
-    ...opts,
-    headers: { Authorization: 'Bearer ' + accessToken, ...(opts.headers || {}) }
-  });
+  const r = await fetch(url, { ...opts, headers: { Authorization: 'Bearer ' + accessToken, ...(opts.headers || {}) } });
   if (!r.ok) {
     let e = {};
     try { e = await r.json(); } catch(_) {}
@@ -683,9 +725,9 @@ function setSaveStatus(ok, msg) {
 //  PDF PARSING
 // ════════════════════════════════════════════════════════════
 async function extraireTexte(file) {
-  const buf  = await file.arrayBuffer();
-  const pdf  = await pdfjsLib.getDocument({ data: buf }).promise;
-  let texte  = '';
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  let texte = '';
   for (let i = 1; i <= pdf.numPages; i++) {
     const page  = await pdf.getPage(i);
     const items = await page.getTextContent();
@@ -721,7 +763,7 @@ function parseConv(t) {
 }
 
 function parseASF(t) {
-  const m = t.match(/Du\s+(\d{2}\/\d{2}\/\d{4})\s+au\s+(\d{2}\/\d{2}\/\d{4})/i);
+  const m  = t.match(/Du\s+(\d{2}\/\d{2}\/\d{4})\s+au\s+(\d{2}\/\d{2}\/\d{4})/i);
   if (!m) return null;
   const mj = t.match(/jours\s+[àa]\s+solder\s*:\s*(\d+)/i);
   const mg = t.match(/Document\s+g[ée]n[ée]r[ée]\s+le\s+(\d{2}\/\d{2}\/\d{4})/i);
@@ -729,29 +771,19 @@ function parseASF(t) {
 }
 
 function parseBMS(t) {
-  // Extraction mois : "BMS : JANVIER" ou "Période du 01/01/2025" ou "JANVIER 2025"
-  const mm = t.match(/BULLETIN\s+MENSUEL\s+DE\s+SOLDE\s*[:\-]?\s*([A-ZÉÛÀA-zéûà]+)/i)
-           || t.match(/SOLDE\s+(?:DU\s+MOIS\s+D['E]?\s*)?([A-ZÉÛÀA-zéûà]{3,})/i);
+  const mm = t.match(/BULLETIN\s+MENSUEL\s+DE\s+SOLDE\s*[:\-]?\s*([A-ZÉÛÀa-zéûà]+)/i)
+           || t.match(/SOLDE\s+(?:DU\s+MOIS\s+D['E]?\s*)?([A-ZÉÛÀa-zéûà]{3,})/i);
   const ma = t.match(/[Pp][ée]riode\s+du\s+\d{2}\/\d{2}\/(\d{4})/)
            || t.match(/\b(20\d{2})\b/);
-  // Stratégie robuste pour extraire le NET À PAYER
-  // PDF.js peut placer le montant AVANT ou APRÈS la ligne "NET A PAYER"
-  // selon l'ordre de reconstruction des éléments du tableau PDF
   let mn = null;
-
-  // Extraction NET À PAYER — validée sur 28 BMS réels 2023→2026
-  // Règle : chercher la ligne "Montant : X" qui précède "IBAN"
-  // C'est la ligne du virement bancaire, toujours présente et fiable
   const _lines = t.split('\n');
   for (let i = 0; i < _lines.length; i++) {
     const l = _lines[i].trim();
-    // La ligne doit commencer par "Montant :" et ne pas contenir "net" ou "social"
     if (!/^Montant\s*:/i.test(l)) continue;
     if (/net|social/i.test(l)) continue;
-    const _m = l.match(/Montant\s*:\s*([\d][\d\s\u00A0]*[,.]\d{2})(?:\s*EUR)?/i);
+    const _m = l.match(/Montant\s*:\s*([\d][\d\s ]*[,.]\d{2})(?:\s*EUR)?/i);
     if (_m) {
-      const _val = parseFloat(_m[1].replace(/[\s\u00A0]/g,'').replace(',','.'));
-      // Plage valide pour un réserviste : 5€ à 10 000€
+      const _val = parseFloat(_m[1].replace(/[\s ]/g,'').replace(',','.'));
       if (_val >= 5 && _val <= 10000) { mn = _m; break; }
     }
   }
@@ -761,29 +793,27 @@ function parseBMS(t) {
     const l = ligne.trim(); const m = RE.exec(l); if (!m) return;
     const lib = m[1], d1 = m[2], d2 = m[3], val = parseFloat(m[4].replace(/\s/g,'').replace(',','.'));
     const key = d1+'|'+d2;
-    if (lib.includes('Solde de base'))                       { if (!missions[key]) missions[key]={deb:d1,fin:d2,solde:0,isao:0}; missions[key].solde += val; }
-    else if (lib.includes('ISAO'))                           { if (!missions[key]) missions[key]={deb:d1,fin:d2,solde:0,isao:0}; missions[key].isao  += val; }
+    if (lib.includes('Solde de base'))                            { if (!missions[key]) missions[key]={deb:d1,fin:d2,solde:0,isao:0}; missions[key].solde += val; }
+    else if (lib.includes('ISAO'))                                { if (!missions[key]) missions[key]={deb:d1,fin:d2,solde:0,isao:0}; missions[key].isao  += val; }
     else if (lib.includes('Allocation') && lib.includes('tudes')) { alloc += val; }
   });
-
-  // Fusionner les entrées ISAO-seules dans la mission de base qui chevauche les mêmes dates
-  // L'ISAO est une prime de terrain sur les mêmes jours — pas des jours supplémentaires
+  // Fusion ISAO-seul dans la mission de base chevauchante
   Object.entries(missions).forEach(([key, m]) => {
-    if (m.solde > 0 || m.isao === 0) return; // déjà une mission complète
-    // Cherche une mission "Solde de base" dont les dates se chevauchent
+    if (m.solde > 0 || m.isao === 0) return;
     const base = Object.entries(missions).find(([k, bm]) => {
       if (k === key || bm.solde === 0) return false;
       return !(ts(m.fin) < ts(bm.deb) || ts(m.deb) > ts(bm.fin));
     });
     if (base) { base[1].isao += m.isao; delete missions[key]; }
   });
-
-  // Calcule les jours pour chaque mission depuis les dates
-  const missionsAvecJours = Object.values(missions).map(m => {
-    const j = calcJours(m.deb, m.fin);
-    return { ...m, joursCalc: j };
-  });
-  return { mois: mm?mm[1].toUpperCase():'INCONNU', annee: ma?parseInt(ma[1]):new Date().getFullYear(), net: mn?parseFloat(mn[1].replace(/[\s ]/g,'').replace(',','.')):0, alloc, missions: missionsAvecJours };
+  const missionsAvecJours = Object.values(missions).map(m => ({ ...m, joursCalc: calcJours(m.deb, m.fin) }));
+  return {
+    mois   : mm ? mm[1].toUpperCase() : 'INCONNU',
+    annee  : ma ? parseInt(ma[1])     : new Date().getFullYear(),
+    net    : mn ? parseFloat(mn[1].replace(/[\s ]/g,'').replace(',','.')) : 0,
+    alloc,
+    missions: missionsAvecJours
+  };
 }
 
 // ════════════════════════════════════════════════════════════
@@ -793,28 +823,22 @@ async function onFile(input, typeHint) {
   const file = input.files[0];
   if (!file) return;
   input.value = '';
-
   showProc('Lecture du PDF…');
   try {
     const texte = await extraireTexte(file);
     const type  = detectType(texte);
     hideProc();
-
     if (type === 'INCONNU') { toast('❓ Document non reconnu', 'terr'); return; }
-
-    // Upload Drive en parallèle (silencieux)
     if (accessToken) {
       showProc('Sauvegarde sur Drive…');
       try { await uploaderPDFDrive(file); } catch(e) { console.warn('Drive upload:', e); }
       hideProc();
       toast('📁 PDF sauvegardé sur Drive', 'tok');
     }
-
     if      (type === 'CONVOCATION') ouvrirConv(parseConv(texte));
     else if (type === 'ASF')         ouvrirASF(parseASF(texte));
     else if (type === 'BMS')         ouvrirBMS(parseBMS(texte));
-
-  } catch(e) { hideProc(); toast('❌ Erreur: ' + e.message, 'terr'); }
+  } catch(e) { hideProc(); toast('❌ Erreur : ' + e.message, 'terr'); }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -833,8 +857,7 @@ function ouvrirConv(d) {
     </div>
     <div class="fg"><label>Jours théoriques</label><input id="f_jtheo" type="number" value="${d.joursTheo||''}" min="1"></div>
     <div class="fg"><label>Code activité</label><input id="f_code" type="text" value="${esc(d.code)}"></div>
-    <div class="fg"><label>Référence OM</label><input id="f_ref" type="text" value="${esc(d.ref)}"></div>
-  `;
+    <div class="fg"><label>Référence OM</label><input id="f_ref" type="text" value="${esc(d.ref)}"></div>`;
   document.getElementById('overlay').classList.add('show');
 }
 
@@ -860,8 +883,7 @@ function ouvrirASF(d) {
       <div class="fg"><label>Date fin</label><input id="f_fin" type="date" value="${fi(d.fin)}"></div>
     </div>
     <div class="fg"><label>Jours réels soldés</label><input id="f_jreels" type="number" value="${d.joursReels||''}" min="1">${alertHTML}</div>
-    <div class="fg"><label>Date validation ASF</label><input id="f_datevalid" type="date" value="${fi(d.dateValid)}"></div>
-  `;
+    <div class="fg"><label>Date validation ASF</label><input id="f_datevalid" type="date" value="${fi(d.dateValid)}"></div>`;
   document.getElementById('overlay').classList.add('show');
 }
 
@@ -872,34 +894,30 @@ function ouvrirBMS(d) {
     const joursAuto = m.joursCalc || calcJours(m.deb, m.fin) || '';
     missHTML += `
       <div style="background:var(--fond);border-radius:4px;padding:10px 12px;margin-bottom:8px">
-        <div style="font-size:11px;font-weight:700;color:var(--kaki);margin-bottom:8px">
-          MISSION ${i+1} — ${m.deb} → ${m.fin}
-        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--kaki);margin-bottom:8px">MISSION ${i+1} — ${m.deb} → ${m.fin}</div>
         <div class="frow">
           <div class="fg">
             <label>Jours effectués ✏️</label>
-            <input type="number" id="f_jours_${i}" value="${joursAuto}" min="1" max="365"
-              style="font-weight:700;font-size:16px;border-color:var(--kaki-light)">
+            <input type="number" id="f_jours_${i}" value="${joursAuto}" min="1" max="365" style="font-weight:700;font-size:16px;border-color:var(--kaki-light)">
             <span style="font-size:11px;color:var(--doux);margin-top:2px">Calculé : ${joursAuto}j — corrigez si besoin</span>
           </div>
           <div class="fg"><label>Solde Base ENSAP (€)</label><input type="number" id="f_solde_${i}" value="${m.solde||''}" step="0.01"></div>
         </div>
         <div class="frow" style="margin-top:8px">
-          <div class="fg"><label>ISAO (€)</label><input type="number" id="f_isao_${i}" value="${m.isao||''}" step="0.01"></div>
+          <div class="fg"><label>ISAO — Prime terrain (€)</label><input type="number" id="f_isao_${i}" value="${m.isao||''}" step="0.01"></div>
           <div class="fg"></div>
         </div>
       </div>`;
   });
   document.getElementById('mTitle').textContent = `💰 BMS ${d.mois} ${d.annee}`;
-  document.getElementById('mSub').textContent   = `${d.missions.length} mission(s) détectée(s).`;
+  document.getElementById('mSub').textContent   = `${d.missions.length} mission(s) — vérifiez les montants détectés automatiquement.`;
   document.getElementById('mFields').innerHTML  = missHTML + `
+    <hr style="border:none;border-top:1px solid var(--bord);margin:4px 0 12px">
     <div class="frow">
-      <div class="fg"><label>Allocation Études (€)</label><input type="number" id="f_alloc" value="${d.alloc||''}" step="0.01"></div>
+      <div class="fg"><label>Allocation Études (€ brut)</label><input type="number" id="f_alloc" value="${d.alloc||''}" step="0.01"></div>
       <div class="fg">
-        <label>NET À PAYER BMS (€) — ce qui est viré sur votre compte</label>
-        <input type="number" id="f_net" value="${d.net||''}" step="0.01"
-          style="font-weight:800;font-size:16px;border-color:var(--vert);border-width:2px"
-          placeholder="Ex: 90.47">
+        <label>NET À PAYER (€) — montant viré</label>
+        <input type="number" id="f_net" value="${d.net||''}" step="0.01" style="font-weight:800;font-size:16px;border-color:var(--vert);border-width:2px" placeholder="Ex: 342.18">
         ${d.net ? '<span style="font-size:11px;color:var(--vert);margin-top:2px">✅ Détecté automatiquement — vérifiez</span>' : '<span style="font-size:11px;color:var(--orange);margin-top:2px">⚠️ Non détecté — saisissez manuellement</span>'}
       </div>
     </div>`;
@@ -916,27 +934,27 @@ async function confirmModal() {
     const deb = if2(document.getElementById('f_deb').value);
     const fin = if2(document.getElementById('f_fin').value);
     if (!deb || !fin) { toast('❌ Dates obligatoires', 'terr'); return; }
-    const annee    = parseInt(deb.split('/')[2]);
-    const rows     = getRows(annee);
-    const idx      = findIdx(rows, deb, fin);
-    const joursTheo= parseInt(document.getElementById('f_jtheo').value) || null;
-    const mission  = document.getElementById('f_mission').value.trim();
-    const code     = document.getElementById('f_code').value.trim();
-    const ref      = document.getElementById('f_ref').value.trim();
+    const annee     = parseInt(deb.split('/')[2]);
+    const rows      = getRows(annee);
+    const idx       = findIdx(rows, deb, fin);
+    const joursTheo = parseInt(document.getElementById('f_jtheo').value) || null;
+    const mission   = document.getElementById('f_mission').value.trim();
+    const code      = document.getElementById('f_code').value.trim();
+    const ref       = document.getElementById('f_ref').value.trim();
     if (idx !== -1) { if (joursTheo) rows[idx].joursTheo = joursTheo; if (mission) rows[idx].mission = mission; rows[idx].code = code; rows[idx].ref = ref; }
-    else { rows.push({ id: Date.now(), mission, deb, fin, joursTheo, joursReels: null, dateValid: '', ecart: '', statut: 1, code, ref, solde: 0, isao: 0, alloc: 0, net: 0 }); rows.sort((a,b) => ts(a.deb)-ts(b.deb)); }
+    else { rows.push({ id: Date.now(), mission, deb, fin, joursTheo, joursReels: null, dateValid: '', ecart: '', statut: 1, code, ref, solde: 0, isao: 0 }); rows.sort((a,b) => ts(a.deb)-ts(b.deb)); }
     setRows(annee, rows);
     anneeActive = annee;
 
   } else if (type === 'ASF') {
-    const deb       = if2(document.getElementById('f_deb').value);
-    const fin       = if2(document.getElementById('f_fin').value);
-    const joursReels= parseInt(document.getElementById('f_jreels').value) || null;
-    const dateValid = if2(document.getElementById('f_datevalid').value);
-    const annee     = parseInt(deb.split('/')[2]);
-    const rows      = getRows(annee);
-    let   idx       = findIdx(rows, deb, fin);
-    if (idx === -1) { rows.push({ id: Date.now(), mission:'', deb, fin, joursTheo:null, joursReels:null, dateValid:'', ecart:'', statut:1, code:'', ref:'', solde:0, isao:0, alloc:0, net:0 }); rows.sort((a,b)=>ts(a.deb)-ts(b.deb)); idx = findIdx(rows, deb, fin); }
+    const deb        = if2(document.getElementById('f_deb').value);
+    const fin        = if2(document.getElementById('f_fin').value);
+    const joursReels = parseInt(document.getElementById('f_jreels').value) || null;
+    const dateValid  = if2(document.getElementById('f_datevalid').value);
+    const annee      = parseInt(deb.split('/')[2]);
+    const rows       = getRows(annee);
+    let   idx        = findIdx(rows, deb, fin);
+    if (idx === -1) { rows.push({ id: Date.now(), mission:'', deb, fin, joursTheo:null, joursReels:null, dateValid:'', ecart:'', statut:1, code:'', ref:'', solde:0, isao:0 }); rows.sort((a,b)=>ts(a.deb)-ts(b.deb)); idx = findIdx(rows, deb, fin); }
     const l = rows[idx];
     l.joursReels = joursReels; l.dateValid = dateValid; l.statut = Math.max(l.statut||1, 2);
     if (l.joursTheo && joursReels !== null) {
@@ -949,12 +967,8 @@ async function confirmModal() {
   } else if (type === 'BMS') {
     const alloc = parseFloat(document.getElementById('f_alloc').value) || 0;
     const net   = parseFloat(document.getElementById('f_net').value)   || 0;
-
-    // NET + alloc → stockés dans bmsState (1 entrée par BMS mensuel)
-    // Le NET BMS est le total net du mois entier, PAS divisé par mission
     addBMS(data.annee, { mois: data.mois, annee: data.annee, net, alloc });
 
-    // Sur chaque ligne mission → uniquement solde brute ENSAP + ISAO
     data.missions.forEach((m, i) => {
       const solde = parseFloat(document.getElementById(`f_solde_${i}`).value) || 0;
       const isao  = parseFloat(document.getElementById(`f_isao_${i}`).value)  || 0;
@@ -963,54 +977,35 @@ async function confirmModal() {
       const isaoSeulement = (solde === 0 && isao > 0);
       let   idx   = findIdx(rows, m.deb, m.fin);
       if (idx === -1) {
-        // Si ISAO-seul, cherche une mission existante qui chevauche ces dates
         if (isaoSeulement) {
           const overlapIdx = rows.findIndex(r => !(ts(m.fin) < ts(r.deb) || ts(m.deb) > ts(r.fin)));
           if (overlapIdx !== -1) { rows[overlapIdx].isao += isao; rows[overlapIdx].bmsMois = data.mois; rows[overlapIdx].bmsAnnee = data.annee; rows[overlapIdx].statut = Math.max(rows[overlapIdx].statut||1, 3); setRows(annee, rows); return; }
         }
-        // Nouvelle ligne — ISAO-seule n'a pas de jours propres
         rows.push({ id: Date.now(), mission:'', deb:m.deb, fin:m.fin, joursTheo:null, joursReels:null, dateValid:'', ecart: isaoSeulement ? 'ℹ️ Prime terrain (ISAO)' : '⚠️ BMS sans convoc', statut:1, code:'', ref:'', solde:0, isao:0, isaoOnly: isaoSeulement, bmsMois:data.mois, bmsAnnee:data.annee });
         rows.sort((a,b)=>ts(a.deb)-ts(b.deb));
         idx = findIdx(rows, m.deb, m.fin);
       }
-      rows[idx].solde   += solde;
-      rows[idx].isao    += isao;
-      rows[idx].bmsMois  = data.mois;
-      rows[idx].bmsAnnee = data.annee;
-      rows[idx].statut   = Math.max(rows[idx].statut||1, 3);
-      // Jours : ISAO-seul ne compte pas ses propres jours (déjà comptés dans la mission de base)
+      rows[idx].solde    += solde;
+      rows[idx].isao     += isao;
+      rows[idx].bmsMois   = data.mois;
+      rows[idx].bmsAnnee  = data.annee;
+      rows[idx].statut    = Math.max(rows[idx].statut||1, 3);
       if (!isaoSeulement) {
         const joursInput = parseInt(document.getElementById(`f_jours_${i}`)?.value) || null;
-        if (joursInput) {
-          rows[idx].joursReels = joursInput;
-        } else if (!rows[idx].joursReels && !rows[idx].joursTheo) {
-          const j = calcJours(m.deb, m.fin);
-          if (j) rows[idx].joursReels = j;
-        }
+        if (joursInput) rows[idx].joursReels = joursInput;
+        else if (!rows[idx].joursReels && !rows[idx].joursTheo) { const j = calcJours(m.deb, m.fin); if (j) rows[idx].joursReels = j; }
       }
       setRows(annee, rows);
     });
 
-    // Toujours stocker le NET BMS même s'il n'y a pas de mission soldée
-    // (ex: BMS avec uniquement la prime étudiante)
-    if (data.missions.length === 0) {
-      addBMS(data.annee, { mois: data.mois, annee: data.annee, net, alloc });
-    }
-
+    if (data.missions.length === 0) addBMS(data.annee, { mois: data.mois, annee: data.annee, net, alloc });
     anneeActive = data.annee;
   }
 
   closeModal();
-  // Sauvegarde Sheets
   showProc('Sauvegarde…');
-  try {
-    await sauvegarderSheets();
-    setSaveStatus(true, 'Sauvegardé');
-  } catch(e) {
-    console.warn('Sheets save:', e);
-    setSaveStatus(false, 'Erreur Drive');
-    toast('⚠️ Sauvegarde Drive échouée — données conservées localement', 'terr');
-  }
+  try { await sauvegarderSheets(); setSaveStatus(true, 'Sauvegardé'); }
+  catch(e) { console.warn('Sheets save:', e); setSaveStatus(false, 'Erreur Drive'); toast('⚠️ Sauvegarde Drive échouée — données conservées localement', 'terr'); }
   hideProc();
   rafraichir();
   toast('✅ Enregistré', 'tok');
@@ -1028,55 +1023,17 @@ function ajouterManuel() {
     </div>
     <div class="fg"><label>Jours théoriques</label><input id="f_jtheo" type="number" min="1"></div>
     <div class="fg"><label>Type d'activité</label><input id="f_code" type="text" placeholder="Terrain, Instruction…"></div>
-    <div class="fg"><label>Référence OM</label><input id="f_ref" type="text"></div>
-  `;
+    <div class="fg"><label>Référence OM</label><input id="f_ref" type="text"></div>`;
   document.getElementById('overlay').classList.add('show');
 }
 
 // ════════════════════════════════════════════════════════════
 //  RENDU
 // ════════════════════════════════════════════════════════════
-function rafraichir() { renderAnnees(); renderKPI(); renderAlertes(); renderTableau(); renderBMS(); }
-
-function renderAlertes() {
-  const rows = getRows(anneeActive);
-  const bms  = getBMS(anneeActive);
-  const wrap = document.getElementById('alertesWrap');
-  const cont = document.getElementById('alertesContent');
-  const alertes = [];
-
-  // Missions convoquées sans ASF depuis plus de 30 jours
-  const today = Date.now();
-  rows.forEach(l => {
-    if (l.statut === 1 && l.fin) {
-      const finTs = ts(l.fin);
-      const delta = Math.round((today - finTs) / 86400000);
-      if (delta > 30) {
-        alertes.push({ cls: 'alerte-warn', msg: `<b>${l.mission || (l.deb + ' → ' + l.fin)}</b> — ASF non reçu ${delta}j après la fin de mission` });
-      }
-    }
-    // Mission avec ASF mais sans BMS
-    if (l.statut === 2 && !l.bmsMois && l.fin) {
-      const finTs = ts(l.fin);
-      const delta = Math.round((today - finTs) / 86400000);
-      if (delta > 45) {
-        const montantEst = ((l.joursReels || l.joursTheo || 0) * 60.385).toFixed(2).replace('.', ',');
-        alertes.push({ cls: 'alerte-err', msg: `<b>${l.mission || (l.deb + ' → ' + l.fin)}</b> — Paiement non reçu (ASF validé il y a ${delta}j, ~${montantEst} € attendus)` });
-      }
-    }
-  });
-
-  // Total attendu vs total perçu
-  const totalNet = bms.reduce((s,b) => s + (b.net||0), 0);
-  const totalAtt = rows.filter(l => !l.bmsMois && l.statut >= 1).reduce((s,l) => s + ((l.joursReels||l.joursTheo||0)*60.385), 0);
-
-  if (!alertes.length && totalAtt < 1) { wrap.style.display = 'none'; return; }
-  wrap.style.display = 'block';
-  const html = alertes.map(a => `<div class="alerte ${a.cls}">${a.msg}</div>`).join('');
-  const resume = totalAtt > 0
-    ? `<div class="alerte alerte-info">💶 Solde non encore payée estimée : <b>~${eur(totalAtt)}</b> (${rows.filter(l=>!l.bmsMois&&l.statut>=1).length} mission(s))</div>`
-    : '';
-  cont.innerHTML = html + resume;
+function rafraichir() {
+  renderAnnees();
+  renderTabMissions();
+  renderTabPaiements();
 }
 
 function renderAnnees() {
@@ -1086,199 +1043,179 @@ function renderAnnees() {
   document.getElementById('annees').innerHTML = all.map(a =>
     `<button class="btn-annee${a===anneeActive?' active':''}" onclick="changerAnnee(${a})">${a}</button>`
   ).join('');
-  document.getElementById('anneeLabel').textContent = `— ${anneeActive}`;
 }
 
 function changerAnnee(a) { anneeActive = a; rafraichir(); }
 
-function renderBMS() {
-  const bms   = getBMS(anneeActive);
-  const rows  = getRows(anneeActive);
-  const wrap  = document.getElementById('bmsSectionWrap');
-  const tbody = document.getElementById('tbodyBMS');
-
-  document.getElementById('anneeLabel2').textContent = '— ' + anneeActive;
-
-  if (!bms.length) { wrap.style.display = 'none'; return; }
-  wrap.style.display = 'block';
-
-  tbody.innerHTML = bms.map(b => {
-    // Missions couvertes par ce BMS
-    const missions = rows
-      .filter(l => l.bmsMois === b.mois && l.bmsAnnee === b.annee)
-      .map(l => (l.mission || l.deb + '→' + l.fin))
-      .join(', ') || '—';
-
-    return `<tr>
-      <td style="font-weight:700">${b.mois} ${b.annee}</td>
-      <td class="td-mont" style="font-size:16px;font-weight:800;color:var(--vert)">${eur(b.net)}</td>
-      <td class="td-mont">${b.alloc ? eur(b.alloc) + ' <span style="font-size:10px;color:var(--doux)">(brut)</span>' : '—'}</td>
-      <td style="font-size:12px;color:var(--doux)">${missions}</td>
-    </tr>`;
-  }).join('');
-}
-
-// Compte les jours d'une liste de lignes qui tombent dans [debLimit, finLimit] (timestamps)
+// ── Jours sur une plage de dates (timestamps) ─────────────
 function joursEnPeriode(lignes, debLimit, finLimit) {
   return lignes.reduce((s, l) => {
-    if (l.isaoOnly || (!l.deb && !l.fin)) return s;
+    if (l.isaoOnly || !l.deb) return s;
     const dTs = ts(l.deb), fTs = ts(l.fin || l.deb);
-    // Intersection entre la mission et la période
     const start = Math.max(dTs, debLimit);
     const end   = Math.min(fTs, finLimit);
     if (end < start) return s;
-    const jours = Math.round((end - start) / 86400000) + 1;
-    // On ne peut compter plus que les jours réels/théo de la ligne
+    const jours     = Math.round((end - start) / 86400000) + 1;
     const joursLigne = l.joursReels || l.joursTheo || Math.round((fTs - dTs) / 86400000) + 1;
     return s + Math.min(jours, joursLigne);
   }, 0);
 }
 
-function renderKPI() {
-  const rows  = getRows(anneeActive);
-  const bms   = getBMS(anneeActive);
+// ── ONGLET MISSIONS ───────────────────────────────────────
+function renderTabMissions() {
+  const rows = getRows(anneeActive);
 
-  // ── Jours année civile (1 jan → 31 déc de l'année active) ────────
+  // Jours année civile
   const debCivile = new Date(anneeActive, 0, 1).getTime();
   const finCivile = new Date(anneeActive, 11, 31).getTime();
-  const jours = joursEnPeriode(rows, debCivile, finCivile);
+  const jours     = joursEnPeriode(rows, debCivile, finCivile);
 
-  // ── Jours année scolaire (1 sep N-1 → 31 août N) ─────────────────
-  // Ex : si anneeActive = 2025, année scolaire = sept 2024 → août 2025
-  const debScol   = new Date(anneeActive - 1, 8, 1).getTime();  // 1 sept N-1
-  const finScol   = new Date(anneeActive, 7, 31).getTime();     // 31 août N
-  const rowsScol  = [...getRows(anneeActive - 1), ...rows];     // missions des deux années civiles
+  // Jours année scolaire (1 sept N-1 → 31 août N)
+  const debScol   = new Date(anneeActive - 1, 8, 1).getTime();
+  const finScol   = new Date(anneeActive, 7, 31).getTime();
+  const rowsScol  = [...getRows(anneeActive - 1), ...rows];
   const joursScol = joursEnPeriode(rowsScol, debScol, finScol);
 
-  document.getElementById('kJours').textContent     = jours;
-  document.getElementById('kJoursSub').textContent  = `janv. ${anneeActive} → déc. ${anneeActive}`;
-  document.getElementById('kJoursScol').textContent = joursScol;
+  document.getElementById('kJours').textContent        = jours;
+  document.getElementById('kJoursSub').textContent     = `janv. → déc. ${anneeActive}`;
+  document.getElementById('kJoursScol').textContent    = joursScol;
   document.getElementById('kJoursScolSub').textContent = `sept. ${anneeActive-1} → août ${anneeActive}`;
+  document.getElementById('anneeLabel').textContent    = `— ${anneeActive}`;
 
-  // FIDERES basé sur l'année civile (critère officiel)
-  const pct = Math.min(jours/37*100, 100);
-  document.getElementById('kFidVal').textContent = jours+'/37';
-  document.getElementById('fCount').textContent  = jours+' / 37 jours (année civile)';
-  document.getElementById('fFill').style.width   = pct+'%';
-  document.getElementById('fFill').className     = 'fideres-fill'+(jours>=37?' done':'');
-  document.getElementById('kFidBadge').innerHTML = jours>=37
+  // FIDERES (critère officiel = année civile)
+  const pct = Math.min(jours / 37 * 100, 100);
+  document.getElementById('kFidVal').textContent = `${jours}/37`;
+  document.getElementById('fCount').textContent  = `${jours} / 37 jours`;
+  document.getElementById('fFill').style.width   = pct + '%';
+  document.getElementById('fFill').className     = 'fideres-fill' + (jours >= 37 ? ' done' : '');
+  document.getElementById('kFidBadge').innerHTML = jours >= 37
     ? '<span class="badge b-ok">🟢 ÉLIGIBLE</span>'
-    : `<span class="badge b-warn">${37-jours}j restants</span>`;
+    : `<span class="badge b-warn">${37 - jours}j restants</span>`;
 
-  // Total perçu = somme des NET À PAYER de chaque BMS reçu
-  // (le NET BMS inclut déjà toutes les cotisations déduites)
-  const percu = bms.reduce((s,b) => s + (b.net||0), 0);
+  // Alertes
+  renderAlertes(rows);
 
-  // En attente = missions sans BMS associé (estimation brute)
-  const att = rows
-    .filter(l => !l.bmsMois && l.statut < 3)
-    .reduce((s,l) => s + ((l.joursReels||l.joursTheo||0) * 60.385), 0);
+  // Tableau
+  const tbody = document.getElementById('tbody');
+  const tfoot = document.getElementById('tfoot');
+  const emp   = document.getElementById('emptyState');
+  if (!rows.length) { tbody.innerHTML = ''; emp.style.display = 'block'; tfoot.style.display = 'none'; return; }
+  emp.style.display = 'none';
 
-  document.getElementById('kPercu').textContent = eur(percu);
-  document.getElementById('kAtt').textContent   = eur(att);
-
-  // Prime étudiante :
-  // - Mois avec UNIQUEMENT l'alloc (pas de mission soldée) → NET BMS = net réel de la prime
-  // - Mois avec missions + alloc → on ne peut pas isoler la prime nette du NET global
-  let etudNet = 0;
-  let etudBrut = 0;
-  const rows2 = getRows(anneeActive);
-  bms.forEach(b => {
-    if (!b.alloc) return;
-    // Est-ce un mois avec uniquement l'alloc ? (pas de mission liée à ce BMS)
-    const missionsLiees = rows2.filter(l => l.bmsMois === b.mois && l.bmsAnnee === b.annee && (l.solde > 0 || l.isao > 0));
-    if (missionsLiees.length === 0) {
-      // NET BMS = net réel de la prime ce mois
-      etudNet += (b.net || 0);
-    } else {
-      // Impossible d'isoler — on affiche le brut
-      etudBrut += b.alloc;
-    }
-  });
-  const etudAffiche = etudNet + etudBrut;
-  const etudLabel   = etudNet > 0 && etudBrut === 0
-    ? eur(etudNet) + ' net'
-    : etudBrut > 0 && etudNet === 0
-      ? eur(etudBrut) + ' brut'
-      : eur(etudNet) + ' net + ' + eur(etudBrut) + ' brut';
-  // Affichage prime étudiante : toujours en NET quand possible
-  // 100€ brut → 90,47€ net (CSG/CRDS)
-  const TAUX_NET_PRIME = 0.9047; // taux net constaté sur les BMS
-  const nbMoisAlloc = bms.filter(b => b.alloc > 0).length;
-  const etudNetCalc = nbMoisAlloc > 0 && etudNet === 0
-    ? bms.filter(b => b.alloc > 0 && getBMS(anneeActive).find(x => x.mois===b.mois)?.net > 0
-        && getRows(anneeActive).filter(l => l.bmsMois===b.mois).every(l => !l.solde && !l.isao))
-        .reduce((s,b) => s + (b.net||0), 0)
-    : etudNet;
-  // Prime nette = nb mensualités × 90,47€
-  const totalAllocBrut = bms.reduce((s,b) => s + (b.alloc||0), 0);
-  const totalAllocNet  = Math.round(totalAllocBrut * 0.9047 * 100) / 100;
-  const nbMensualites  = Math.round(totalAllocBrut / 100);
-  document.getElementById('kEtud').textContent    = eur(totalAllocNet);
-  document.getElementById('kEtudSub').textContent = nbMensualites > 0
-    ? `${nbMensualites} mois × 90,47€ net`
-    : 'aucun mois';
-}
-
-function renderTableau() {
-  const rows = getRows(anneeActive);
-  const tbody= document.getElementById('tbody');
-  const tfoot= document.getElementById('tfoot');
-  const emp  = document.getElementById('emptyState');
-  if (!rows.length) { tbody.innerHTML=''; emp.style.display='block'; tfoot.style.display='none'; return; }
-  emp.style.display='none';
-  // Totaux — ISAO-seul exclu du comptage jours
   const totJT = rows.reduce((s,l) => l.isaoOnly ? s : s + (l.joursTheo||0), 0);
   const totJR = rows.reduce((s,l) => l.isaoOnly ? s : s + (l.joursReels||0), 0);
-  const totSolde = rows.reduce((s,l) => s + (l.solde||0), 0);
-  const totISAO  = rows.reduce((s,l) => s + (l.isao||0), 0);
   document.getElementById('ftJTheo').textContent  = totJT  || '—';
   document.getElementById('ftJReels').textContent = totJR  || '—';
-  document.getElementById('ftSolde').textContent  = totSolde ? eur(totSolde) : '—';
-  document.getElementById('ftISAO').textContent   = totISAO  ? eur(totISAO)  : '—';
   tfoot.style.display = '';
+
   const sL = ['','📋 Convoqué','✅ ASF OK','💰 Payé'];
   const sC = ['','s1','s2','s3'];
-  tbody.innerHTML = rows.map((l,i) => {
+  tbody.innerHTML = rows.map((l, i) => {
     const st = Math.min(l.statut||1, 3);
-    const ec = l.ecart?.startsWith('⚠️')||l.ecart?.startsWith('🔴') ? 'warn' : l.ecart?.startsWith('✅') ? 'ok' : l.ecart?.startsWith('ℹ️') ? 'warn' : 'muted';
-    // Vérif paye : on compare solde brute ENSAP avec ce qu'on attendait
-    // Le NET BMS global du mois est affiché séparément dans la section BMS
-    const bmsLigne = l.bmsMois ? getBMS(parseInt(l.deb?.split('/')[2])).find(b => b.mois===l.bmsMois) : null;
-    let vp = '<span class="muted">—</span>';
-    if (l.solde > 0 || l.isao > 0) {
-      const brutTotal = (l.solde||0) + (l.isao||0);
-      vp = bmsLigne
-        ? `<span class="ok">✅ Brut=${eur(brutTotal)} | NET BMS=${eur(bmsLigne.net)}</span>`
-        : `<span class="warn">⏳ Brut=${eur(brutTotal)} (BMS non reçu)</span>`;
-    }
+    const ec = l.ecart?.startsWith('⚠️') ? 'warn' : l.ecart?.startsWith('✅') ? 'ok' : l.ecart?.startsWith('ℹ️') ? 'muted' : 'muted';
     return `<tr>
-      <td class="td-mission"><input type="text" value="${esc(l.mission||'')}" placeholder="— nommer —" onchange="majMission(${anneeActive},${i},this.value)" title="${esc(l.ref||'')}"></td>
-      <td class="td-date">${l.deb||'—'}</td><td class="td-date">${l.fin||'—'}</td>
+      <td class="td-mission"><input type="text" value="${esc(l.mission||'')}" placeholder="— nommer —" onchange="majMission(${anneeActive},${i},this.value)"></td>
+      <td class="td-date">${l.deb||'—'}</td>
+      <td class="td-date">${l.fin||'—'}</td>
       <td class="td-jours">${l.joursTheo||'—'}</td>
       <td class="td-jours" style="color:var(--kaki-mid)">${l.joursReels||'—'}</td>
       <td><span class="${ec}">${l.ecart||'—'}</span></td>
       <td><span class="statut ${sC[st]}">${sL[st]}</span></td>
-      <td class="td-mont">${l.solde?eur(l.solde):'—'}</td>
-      <td class="td-mont">${l.isao ?eur(l.isao) :'—'}</td>
-      <td class="td-date">${l.bmsMois ? l.bmsMois+' '+l.bmsAnnee : '<span class=\'muted\'>—</span>'}</td>
-      <td>${vp}</td>
+      <td class="td-date muted">${l.ref||'—'}</td>
       <td><button class="btn-sm btn-del" onclick="delRow(${anneeActive},${i})">✕</button></td>
     </tr>`;
   }).join('');
 }
 
+function renderAlertes(rows) {
+  const wrap = document.getElementById('alertesWrap');
+  const cont = document.getElementById('alertesContent');
+  const alertes = [];
+  const today   = Date.now();
+
+  rows.forEach(l => {
+    if (l.isaoOnly) return;
+    if (l.statut === 1 && l.fin) {
+      const delta = Math.round((today - ts(l.fin)) / 86400000);
+      if (delta > 30) alertes.push({ cls: 'alerte-warn', msg: `<b>${l.mission || (l.deb + ' → ' + l.fin)}</b> — ASF non reçu ${delta} jours après la fin de mission` });
+    }
+    if (l.statut === 2 && !l.bmsMois && l.fin) {
+      const delta = Math.round((today - ts(l.fin)) / 86400000);
+      if (delta > 45) {
+        const est = eur((l.joursReels||l.joursTheo||0) * 60.385);
+        alertes.push({ cls: 'alerte-err', msg: `<b>${l.mission || (l.deb + ' → ' + l.fin)}</b> — Paiement non reçu ${delta} jours après l'ASF (~${est} attendus)` });
+      }
+    }
+  });
+
+  const attente = rows.filter(l => !l.bmsMois && l.statut >= 1 && !l.isaoOnly);
+  const totalAtt = attente.reduce((s,l) => s + ((l.joursReels||l.joursTheo||0) * 60.385), 0);
+
+  if (!alertes.length && totalAtt < 1) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  cont.innerHTML = alertes.map(a => `<div class="alerte ${a.cls}">${a.msg}</div>`).join('')
+    + (totalAtt > 0 ? `<div class="alerte alerte-info">💶 Solde estimée en attente : <b>~${eur(totalAtt)}</b> sur ${attente.length} mission(s) sans BMS</div>` : '');
+}
+
+// ── ONGLET PAIEMENTS ─────────────────────────────────────
+function renderTabPaiements() {
+  const rows = getRows(anneeActive);
+  const bms  = getBMS(anneeActive);
+
+  // KPI financiers
+  const percu    = bms.reduce((s,b) => s + (b.net||0), 0);
+  const att      = rows.filter(l => !l.bmsMois && l.statut >= 1 && !l.isaoOnly).reduce((s,l) => s + ((l.joursReels||l.joursTheo||0)*60.385), 0);
+  document.getElementById('kPercu').textContent = eur(percu);
+  document.getElementById('kAtt').textContent   = eur(att);
+
+  // Primes
+  const totalISAO  = rows.reduce((s,l) => s + (l.isao||0), 0);
+  const totalSolde = rows.reduce((s,l) => l.isaoOnly ? s : s + (l.solde||0), 0);
+  const totalAllocBrut = bms.reduce((s,b) => s + (b.alloc||0), 0);
+  const totalAllocNet  = Math.round(totalAllocBrut * 0.9047 * 100) / 100;
+  const nbMois         = Math.round(totalAllocBrut / 100);
+
+  document.getElementById('pIsao').textContent   = eur(totalISAO);
+  document.getElementById('pSolde').textContent  = eur(totalSolde);
+  document.getElementById('pEtud').textContent   = eur(totalAllocNet);
+  document.getElementById('pEtudSub').textContent = nbMois > 0 ? `${nbMois} mois × 90,47 € net` : '0 mois';
+
+  // Tableau BMS
+  document.getElementById('anneeLabel2').textContent = '— ' + anneeActive;
+  const tbody    = document.getElementById('tbodyBMS');
+  const emptyBMS = document.getElementById('emptyBMS');
+
+  if (!bms.length) { tbody.innerHTML = ''; emptyBMS.style.display = 'block'; return; }
+  emptyBMS.style.display = 'none';
+
+  tbody.innerHTML = bms.map(b => {
+    const missionsLiees = rows.filter(l => l.bmsMois === b.mois && l.bmsAnnee === b.annee);
+    const soldeBrut = missionsLiees.reduce((s,l) => s + (l.solde||0), 0);
+    const isaoBrut  = missionsLiees.reduce((s,l) => s + (l.isao||0), 0);
+    const noms = missionsLiees.map(l => l.mission || (l.deb + '→' + l.fin)).join(', ') || '—';
+    return `<tr>
+      <td style="font-weight:700">${b.mois} ${b.annee}</td>
+      <td class="td-mont" style="font-size:15px;font-weight:800;color:var(--vert)">${eur(b.net)}</td>
+      <td class="td-mont">${soldeBrut ? eur(soldeBrut) : '<span class="muted">—</span>'}</td>
+      <td class="td-mont">${isaoBrut  ? eur(isaoBrut)  : '<span class="muted">—</span>'}</td>
+      <td class="td-mont">${b.alloc   ? eur(b.alloc) + ' <span class="muted">(brut)</span>' : '<span class="muted">—</span>'}</td>
+      <td style="font-size:12px;color:var(--doux)">${noms}</td>
+    </tr>`;
+  }).join('');
+}
+
 // ════════════════════════════════════════════════════════════
-//  ACTIONS
+//  ACTIONS TABLE
 // ════════════════════════════════════════════════════════════
 async function majMission(annee, idx, val) {
-  const rows = getRows(annee); if (rows[idx]) { rows[idx].mission = val; setRows(annee, rows); }
+  const rows = getRows(annee);
+  if (rows[idx]) { rows[idx].mission = val; setRows(annee, rows); }
   try { await sauvegarderSheets(); setSaveStatus(true, 'Sauvegardé'); } catch(e) { setSaveStatus(false, 'Erreur Drive'); }
 }
 
 async function delRow(annee, idx) {
   if (!confirm('Supprimer cette ligne ?')) return;
-  const rows = getRows(annee); rows.splice(idx,1); setRows(annee, rows);
+  const rows = getRows(annee); rows.splice(idx, 1); setRows(annee, rows);
   try { await sauvegarderSheets(); setSaveStatus(true, 'Sauvegardé'); } catch(e) { setSaveStatus(false, 'Erreur Drive'); }
   rafraichir(); toast('🗑️ Ligne supprimée', 'tok');
 }
@@ -1295,7 +1232,7 @@ function sortTable(col) {
     return _sortDir[col] ? va - vb : vb - va;
   });
   setRows(anneeActive, rows);
-  renderTableau();
+  renderTabMissions();
 }
 
 function exportCSV() {
@@ -1308,13 +1245,11 @@ function exportCSV() {
     l.joursTheo||'', l.joursReels||'',
     sL[Math.min(l.statut||1,3)]||'',
     (l.ecart||'').replace(/[^\w\s\-+]/g,''),
-    l.solde||'', l.isao||'',
-    l.bmsMois||'', l.bmsAnnee||'',
-    l.code||'', l.ref||''
+    l.solde||'', l.isao||'', l.bmsMois||'', l.bmsAnnee||'', l.code||'', l.ref||''
   ])];
-  const csv = data.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const csv  = data.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-  const a = document.createElement('a');
+  const a    = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `reserve_${anneeActive}.csv`;
   a.click();
@@ -1325,45 +1260,32 @@ function exportCSV() {
 //  UTILS
 // ════════════════════════════════════════════════════════════
 function findIdx(rows, deb, fin) { return rows.findIndex(r => r.deb===deb && r.fin===fin); }
-
-// Calcule le nombre de jours entre deux dates FR (dd/mm/yyyy) incluses
-function calcJours(deb, fin) {
-  if (!deb || !fin) return null;
-  const diff = ts(fin) - ts(deb);
-  return Math.round(diff / 86400000) + 1;
-}
-function fi(fr) { if(!fr||!fr.includes('/'))return''; const[d,m,y]=fr.split('/'); return `${y}-${m}-${d}`; }
-function if2(inp) { if(!inp)return''; const[y,m,d]=inp.split('-'); return `${d}/${m}/${y}`; }
-function ts(fr) { if(!fr)return 0; const[d,m,y]=fr.split('/'); return new Date(y,m-1,d).getTime(); }
-function eur(v) { return new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(v||0); }
-function esc(s) { return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
-function moisNum(s) { const m={JANVIER:0,FEVRIER:1,FÉVRIER:1,MARS:2,AVRIL:3,MAI:4,JUIN:5,JUILLET:6,AOUT:7,AOÛT:7,SEPTEMBRE:8,OCTOBRE:9,NOVEMBRE:10,DECEMBRE:11,DÉCEMBRE:11}; return m[s?.toUpperCase()]??0; }
+function calcJours(deb, fin) { if (!deb || !fin) return null; return Math.round((ts(fin) - ts(deb)) / 86400000) + 1; }
+function fi(fr)  { if(!fr||!fr.includes('/'))return''; const[d,m,y]=fr.split('/'); return `${y}-${m}-${d}`; }
+function if2(inp){ if(!inp)return''; const[y,m,d]=inp.split('-'); return `${d}/${m}/${y}`; }
+function ts(fr)  { if(!fr)return 0; const[d,m,y]=fr.split('/'); return new Date(y,m-1,d).getTime(); }
+function eur(v)  { return new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(v||0); }
+function esc(s)  { return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 function showProc(t) { document.getElementById('procTxt').textContent=t; document.getElementById('proc').classList.add('show'); }
 function hideProc()  { document.getElementById('proc').classList.remove('show'); }
 function toast(msg, cls='tok') { const t=document.getElementById('toast'); t.textContent=msg; t.className=`toast ${cls} show`; setTimeout(()=>t.classList.remove('show'),3500); }
 
-// ════════════════════════════════════════════════════════
-//  GOOGLE PICKER — Sélecteur de fichiers Drive
-// ════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+//  GOOGLE PICKER
+// ════════════════════════════════════════════════════════════
 let pickerTypeEnCours = null;
 let pickerLoaded = false;
 
 function ouvrirPicker(type) {
   pickerTypeEnCours = type;
-  if (!pickerLoaded) {
-    gapi.load('picker', () => { pickerLoaded = true; afficherPicker(); });
-  } else {
-    afficherPicker();
-  }
+  if (!pickerLoaded) { gapi.load('picker', () => { pickerLoaded = true; afficherPicker(); }); }
+  else { afficherPicker(); }
 }
 
 function afficherPicker() {
   const picker = new google.picker.PickerBuilder()
-    .addView(new google.picker.DocsView()
-      .setIncludeFolders(true)
-      .setMimeTypes('application/pdf'))
+    .addView(new google.picker.DocsView().setIncludeFolders(true).setMimeTypes('application/pdf'))
     .setOAuthToken(accessToken)
-    // .setDeveloperKey('') — non requis pour fichiers personnels avec OAuth
     .setCallback(pickerCallback)
     .setTitle('Choisir un PDF depuis Drive')
     .build();
@@ -1372,36 +1294,23 @@ function afficherPicker() {
 
 async function pickerCallback(data) {
   if (data.action !== google.picker.Action.PICKED) return;
-  const fileId = data.docs[0].id;
-  const fileName = data.docs[0].name;
-
-  showProc('Téléchargement depuis Drive : ' + fileName);
+  const fileId = data.docs[0].id, fileName = data.docs[0].name;
+  showProc('Téléchargement : ' + fileName);
   try {
-    // Télécharge le fichier depuis Drive
-    const resp = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-      { headers: { Authorization: 'Bearer ' + accessToken } }
-    );
-    const blob = await resp.blob();
+    const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: 'Bearer ' + accessToken } });
+    const blob  = await resp.blob();
     const file  = new File([blob], fileName, { type: 'application/pdf' });
     hideProc();
-
-    // Traite comme un upload normal
-    const fakeInput = { files: [file], value: '' };
-    await onFile(fakeInput, pickerTypeEnCours);
-  } catch(e) {
-    hideProc();
-    toast('❌ Erreur téléchargement Drive : ' + e.message, 'terr');
-  }
+    await onFile({ files: [file], value: '' }, pickerTypeEnCours);
+  } catch(e) { hideProc(); toast('❌ Erreur Drive : ' + e.message, 'terr'); }
 }
 
-// Drag & drop
 ['Conv','ASF','BMS'].forEach(id => {
   const z = document.getElementById('dz'+id);
   if (!z) return;
-  z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('over'); });
+  z.addEventListener('dragover',  e => { e.preventDefault(); z.classList.add('over'); });
   z.addEventListener('dragleave', () => z.classList.remove('over'));
-  z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('over'); const f=e.dataTransfer.files[0]; if(f){ const fake={files:[f],value:''}; onFile(fake, id.toUpperCase()); } });
+  z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('over'); const f=e.dataTransfer.files[0]; if(f) onFile({files:[f],value:''}, id.toUpperCase()); });
 });
 
 // ════════════════════════════════════════════════════════════
@@ -1413,8 +1322,6 @@ async function init() {
   if (connected) {
     document.getElementById('bannerConnect').style.display = 'none';
     document.getElementById('appContent').style.display    = 'flex';
-
-    // Info utilisateur
     try {
       const u = await getUserInfo();
       document.getElementById('authArea').innerHTML = `
@@ -1423,26 +1330,19 @@ async function init() {
           <span>${u.given_name}</span>
           <button class="btn-deconnect" onclick="signOut()">Déconnexion</button>
         </div>`;
+      document.getElementById('driveInfo').innerHTML =
+        `<span style="color:var(--vert);font-weight:600">✅ Connecté en tant que ${u.email}</span><br>
+         <span style="color:var(--doux);font-size:12px;margin-top:4px;display:block">Dossier : <b>${DRIVE_FOLDER}</b> — Feuille : <b>${SHEET_NAME}</b></span>`;
     } catch(e) {}
 
-    // Chargement données Sheets
     showProc('Chargement des données…');
-    try {
-      await getOrCreateSheet();
-      await getOrCreateFolder();
-      await chargerDepuisSheets();
-    } catch(e) { console.warn('Init data:', e); }
+    try { await getOrCreateSheet(); await getOrCreateFolder(); await chargerDepuisSheets(); }
+    catch(e) { console.warn('Init data:', e); }
     hideProc();
 
-    // Fallback localStorage si Sheets vide ou inaccessible
-    if (!Object.keys(state).length) {
-      try { state    = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
-    }
-    if (!Object.keys(bmsState).length) {
-      try { bmsState = JSON.parse(localStorage.getItem('reserveBMS') ||'{}'); } catch(e) {}
-    }
+    if (!Object.keys(state).length)    try { state    = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
+    if (!Object.keys(bmsState).length) try { bmsState = JSON.parse(localStorage.getItem('reserveBMS') ||'{}'); } catch(e) {}
   } else {
-    // Fallback local si pas connecté
     try { state    = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
     try { bmsState = JSON.parse(localStorage.getItem('reserveBMS') ||'{}'); } catch(e) {}
     document.getElementById('appContent').style.display = 'flex';
