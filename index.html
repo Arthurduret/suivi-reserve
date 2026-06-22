@@ -474,6 +474,29 @@
       </div>
 
       <div class="card">
+        <div class="card-hdr"><h2>📁 Documents importés</h2></div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Nom du fichier</th>
+                <th>Date d'import</th>
+                <th>Année</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbodyDocs"></tbody>
+          </table>
+          <div class="empty" id="emptyDocs" style="display:none">
+            <div class="empty-icon">📂</div>
+            <div class="empty-title">Aucun document importé</div>
+            <div>Importez vos PDFs ci-dessus.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-hdr"><h2>☁️ Stockage Google Drive</h2></div>
         <div class="card-body">
           <div id="driveInfo" style="font-size:13px;color:var(--doux)">Connectez votre compte Google pour voir l'état du stockage.</div>
@@ -505,6 +528,7 @@ let sheetId       = null;
 let driveFolderId = null;
 let state         = {};   // state[annee].rows = lignes missions
 let bmsState      = {};   // bmsState[annee]   = liste des BMS { mois, annee, net, alloc }
+let docsState     = [];   // [{name, type, date, driveId, annee}]
 let anneeActive   = new Date().getFullYear();
 let tabActive     = 'missions';
 let modalPending  = null;
@@ -826,12 +850,18 @@ async function onFile(input, typeHint) {
     const type  = detectType(texte);
     hideProc();
     if (type === 'INCONNU') { toast('❓ Document non reconnu', 'terr'); return; }
+    let driveId = null;
     if (accessToken) {
       showProc('Sauvegarde sur Drive…');
-      try { await uploaderPDFDrive(file); } catch(e) { console.warn('Drive upload:', e); }
+      try { driveId = await uploaderPDFDrive(file); } catch(e) { console.warn('Drive upload:', e); }
       hideProc();
-      toast('📁 PDF sauvegardé sur Drive', 'tok');
+      if (driveId) toast('📁 PDF sauvegardé sur Drive', 'tok');
     }
+    // Tracker le document
+    const docAnnee = type === 'BMS' ? (parseBMS(texte)?.annee || anneeActive) : anneeActive;
+    docsState.push({ name: file.name, type, date: new Date().toLocaleDateString('fr-FR'), driveId, annee: docAnnee });
+    localStorage.setItem('reserveDocs', JSON.stringify(docsState));
+
     if      (type === 'CONVOCATION') ouvrirConv(parseConv(texte));
     else if (type === 'ASF')         ouvrirASF(parseASF(texte));
     else if (type === 'BMS')         ouvrirBMS(parseBMS(texte));
@@ -1031,6 +1061,32 @@ function rafraichir() {
   renderAnnees();
   renderTabMissions();
   renderTabPaiements();
+  renderTabDocuments();
+}
+
+function renderTabDocuments() {
+  const tbody = document.getElementById('tbodyDocs');
+  const empty = document.getElementById('emptyDocs');
+  if (!tbody) return;
+  if (!docsState.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  const icons = { BMS: '💰', ASF: '✅', CONVOCATION: '📋' };
+  // Tri par date décroissante
+  const sorted = [...docsState].reverse();
+  tbody.innerHTML = sorted.map((d, i) => {
+    const lien = d.driveId
+      ? `<a href="https://drive.google.com/file/d/${d.driveId}/view" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:var(--bleu-pale);color:var(--bleu);padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;text-decoration:none">
+           <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png" width="14"> Ouvrir
+         </a>`
+      : `<span class="muted" style="font-size:11px">Non connecté</span>`;
+    return `<tr>
+      <td><span style="font-size:16px">${icons[d.type]||'📄'}</span> <span style="font-size:12px;font-weight:700;color:var(--kaki)">${d.type}</span></td>
+      <td style="font-size:13px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.name}">${d.name}</td>
+      <td class="td-date">${d.date||'—'}</td>
+      <td class="td-date">${d.annee||'—'}</td>
+      <td>${lien}</td>
+    </tr>`;
+  }).join('');
 }
 
 function renderAnnees() {
@@ -1434,11 +1490,13 @@ async function init() {
 
     if (!Object.keys(state).length)    try { state    = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
     if (!Object.keys(bmsState).length) try { bmsState = JSON.parse(localStorage.getItem('reserveBMS') ||'{}'); } catch(e) {}
+    try { docsState = JSON.parse(localStorage.getItem('reserveDocs')||'[]'); } catch(e) {}
     // Nettoyage automatique des doublons au chargement
     Object.keys(state).forEach(annee => { const r = getRows(Number(annee)); setRows(Number(annee), deduplicerMissions([...r])); });
   } else {
     try { state    = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
     try { bmsState = JSON.parse(localStorage.getItem('reserveBMS') ||'{}'); } catch(e) {}
+    try { docsState = JSON.parse(localStorage.getItem('reserveDocs')||'[]'); } catch(e) {}
     Object.keys(state).forEach(annee => { const r = getRows(Number(annee)); setRows(Number(annee), deduplicerMissions([...r])); });
     document.getElementById('appContent').style.display = 'flex';
   }
