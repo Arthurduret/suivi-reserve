@@ -293,19 +293,28 @@
           <div class="kpi-sub" id="kJoursScolSub">sept. → août</div>
         </div>
         <div class="kpi kf">
-          <div class="kpi-label">Prime FIDERES</div>
+          <div class="kpi-label">Seuil FIDERES / Prime étud.</div>
           <div class="kpi-val" id="kFidVal">0/37</div>
           <div id="kFidBadge"></div>
         </div>
       </div>
 
-      <!-- Barre FIDERES -->
+      <!-- Barre progression + prorata -->
       <div class="fideres-wrap">
         <div class="fideres-hdr">
-          <span>🎯 Progression FIDERES (année civile)</span>
+          <span>🎯 Progression année scolaire (seuil 37j)</span>
           <span class="fideres-count" id="fCount">0 / 37 jours</span>
         </div>
         <div class="fideres-track"><div class="fideres-fill" id="fFill" style="width:0%"></div></div>
+        <div id="prorataWrap" style="display:none;margin-top:12px;padding:10px 14px;border-radius:var(--r);background:var(--rouge-pale);border-left:4px solid var(--rouge)">
+          <div style="font-size:13px;font-weight:700;color:var(--rouge)">⚠️ Prorata à rembourser si arrêt maintenant</div>
+          <div style="font-size:12px;color:#7A1A1A;margin-top:4px" id="prorataDetail"></div>
+          <div style="font-size:20px;font-weight:800;color:var(--rouge);margin-top:6px" id="prorataVal"></div>
+        </div>
+        <div id="primeOkWrap" style="display:none;margin-top:12px;padding:10px 14px;border-radius:var(--r);background:var(--vert-pale);border-left:4px solid var(--vert)">
+          <div style="font-size:13px;font-weight:700;color:var(--vert)">✅ Seuil atteint — prime étudiante acquise</div>
+          <div style="font-size:12px;color:#1A5A2A;margin-top:4px" id="primeOkDetail"></div>
+        </div>
       </div>
 
       <!-- Alertes -->
@@ -1079,15 +1088,36 @@ function renderTabMissions() {
   document.getElementById('kJoursScolSub').textContent = `sept. ${anneeActive-1} → août ${anneeActive}`;
   document.getElementById('anneeLabel').textContent    = `— ${anneeActive}`;
 
-  // FIDERES (critère officiel = année civile)
-  const pct = Math.min(jours / 37 * 100, 100);
-  document.getElementById('kFidVal').textContent = `${jours}/37`;
-  document.getElementById('fCount').textContent  = `${jours} / 37 jours`;
+  // Seuil 37j basé sur l'année scolaire (même référence que la prime étudiante)
+  const pct = Math.min(joursScol / 37 * 100, 100);
+  document.getElementById('kFidVal').textContent = `${joursScol}/37`;
+  document.getElementById('fCount').textContent  = `${joursScol} / 37 jours`;
   document.getElementById('fFill').style.width   = pct + '%';
-  document.getElementById('fFill').className     = 'fideres-fill' + (jours >= 37 ? ' done' : '');
-  document.getElementById('kFidBadge').innerHTML = jours >= 37
+  document.getElementById('fFill').className     = 'fideres-fill' + (joursScol >= 37 ? ' done' : '');
+  document.getElementById('kFidBadge').innerHTML = joursScol >= 37
     ? '<span class="badge b-ok">🟢 ÉLIGIBLE</span>'
-    : `<span class="badge b-warn">${37 - jours}j restants</span>`;
+    : `<span class="badge b-warn">${37 - joursScol}j restants</span>`;
+
+  // Prorata prime étudiante
+  const bmsScol  = getBMS(anneeActive);
+  const allocNet = bmsScol.reduce((s,b) => s + (b.alloc||0) * 0.9047, 0);
+  if (joursScol >= 37 || allocNet === 0) {
+    document.getElementById('prorataWrap').style.display = 'none';
+    if (allocNet > 0) {
+      document.getElementById('primeOkWrap').style.display = '';
+      document.getElementById('primeOkDetail').textContent = `${eur(allocNet)} reçus — seuil ${joursScol}/37j atteint ✓`;
+    } else {
+      document.getElementById('primeOkWrap').style.display = 'none';
+    }
+  } else {
+    document.getElementById('primeOkWrap').style.display = 'none';
+    document.getElementById('prorataWrap').style.display = '';
+    const primeDue    = Math.round(joursScol / 37 * allocNet * 100) / 100;
+    const aRembourser = Math.round((allocNet - primeDue) * 100) / 100;
+    document.getElementById('prorataDetail').textContent =
+      `${joursScol}j / 37j requis — ${eur(allocNet)} reçus — prime acquise : ${eur(primeDue)}`;
+    document.getElementById('prorataVal').textContent = `À rembourser : ${eur(aRembourser)}`;
+  }
 
   // Alertes
   renderAlertes(rows);
