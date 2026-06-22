@@ -474,7 +474,10 @@
       </div>
 
       <div class="card">
-        <div class="card-hdr"><h2>📁 Documents importés</h2></div>
+        <div class="card-hdr">
+          <h2>📁 Documents importés</h2>
+          <button class="btn btn-s btn-sm" onclick="viderDocs()" style="font-size:12px;padding:6px 12px">🗑️ Vider l'historique</button>
+        </div>
         <div class="table-scroll">
           <table>
             <thead>
@@ -601,20 +604,32 @@ async function getUserInfo() {
 // ════════════════════════════════════════════════════════════
 //  GOOGLE DRIVE
 // ════════════════════════════════════════════════════════════
-async function getOrCreateFolder() {
-  const q = encodeURIComponent(`name='${DRIVE_FOLDER}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+const folderCache = {}; // cache des IDs de sous-dossiers
+
+async function getOrCreateFolderDrive(name, parentId) {
+  const cacheKey = (parentId || 'root') + '/' + name;
+  if (folderCache[cacheKey]) return folderCache[cacheKey];
+  const q = encodeURIComponent(`name='${name}' and mimeType='application/vnd.google-apps.folder' and '${parentId || 'root'}' in parents and trashed=false`);
   const r = await gFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
-  if (r.files && r.files.length > 0) { driveFolderId = r.files[0].id; return; }
+  if (r.files && r.files.length > 0) { folderCache[cacheKey] = r.files[0].id; return r.files[0].id; }
   const cr = await gFetch('https://www.googleapis.com/drive/v3/files', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: DRIVE_FOLDER, mimeType: 'application/vnd.google-apps.folder' })
+    body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: parentId ? [parentId] : [] })
   });
-  driveFolderId = cr.id;
+  folderCache[cacheKey] = cr.id;
+  return cr.id;
 }
 
-async function uploaderPDFDrive(file) {
+async function getOrCreateFolder() {
+  driveFolderId = await getOrCreateFolderDrive(DRIVE_FOLDER, null);
+}
+
+async function uploaderPDFDrive(file, annee, type) {
   if (!driveFolderId) await getOrCreateFolder();
-  const meta = JSON.stringify({ name: file.name, parents: [driveFolderId] });
+  // Structure : Suivi Réserve / 2025 / BMS /
+  const anneeId = await getOrCreateFolderDrive(String(annee), driveFolderId);
+  const typeId  = await getOrCreateFolderDrive(type, anneeId);
+  const meta = JSON.stringify({ name: file.name, parents: [typeId] });
   const form = new FormData();
   form.append('metadata', new Blob([meta], { type: 'application/json' }));
   form.append('file', file);
@@ -850,17 +865,22 @@ async function onFile(input, typeHint) {
     const type  = detectType(texte);
     hideProc();
     if (type === 'INCONNU') { toast('❓ Document non reconnu', 'terr'); return; }
+    // Déterminer l'année du document avant upload
+    let docAnnee = anneeActive;
+    if (type === 'BMS')  { const b = parseBMS(texte);  if (b?.annee) docAnnee = b.annee; }
+    if (type === 'ASF')  { const a = parseASF(texte);  if (a?.deb)   docAnnee = parseInt(a.deb.split('/')[2]) || anneeActive; }
+
     let driveId = null;
     if (accessToken) {
       showProc('Sauvegarde sur Drive…');
-      try { driveId = await uploaderPDFDrive(file); } catch(e) { console.warn('Drive upload:', e); }
+      try { driveId = await uploaderPDFDrive(file, docAnnee, type); } catch(e) { console.warn('Drive upload:', e); }
       hideProc();
-      if (driveId) toast('📁 PDF sauvegardé sur Drive', 'tok');
+      if (driveId) toast(`📁 Sauvegardé → ${DRIVE_FOLDER}/${docAnnee}/${type}/`, 'tok');
     }
     // Tracker le document
-    const docAnnee = type === 'BMS' ? (parseBMS(texte)?.annee || anneeActive) : anneeActive;
     docsState.push({ name: file.name, type, date: new Date().toLocaleDateString('fr-FR'), driveId, annee: docAnnee });
     localStorage.setItem('reserveDocs', JSON.stringify(docsState));
+    renderTabDocuments();
 
     if      (type === 'CONVOCATION') ouvrirConv(parseConv(texte));
     else if (type === 'ASF')         ouvrirASF(parseASF(texte));
@@ -1062,6 +1082,14 @@ function rafraichir() {
   renderTabMissions();
   renderTabPaiements();
   renderTabDocuments();
+}
+
+function viderDocs() {
+  if (!confirm('Vider l\'historique des documents ? (les fichiers sur Drive ne sont pas supprimés)')) return;
+  docsState = [];
+  localStorage.removeItem('reserveDocs');
+  renderTabDocuments();
+  toast('🗑️ Historique vidé', 'tok');
 }
 
 function renderTabDocuments() {
