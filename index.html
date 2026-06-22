@@ -1332,6 +1332,12 @@ function renderTabMissions() {
   tbody.innerHTML = rows.filter(l => !l.isaoOnly).map((l, i) => {
     const st  = Math.min(l.statut||1, 3);
     const ec  = l.ecart?.startsWith('⚠️') ? 'warn' : l.ecart?.startsWith('✅') ? 'ok' : l.ecart?.startsWith('ℹ️') ? 'muted' : 'muted';
+    const ecartAffiche = (l.ecart && !l.ecart.includes('BMS sans convoc')) ? l.ecart : '';
+    const ecartHtml = ecartAffiche
+      ? `<span class="${ec}">${ecartAffiche}</span>`
+      : (l.srcDocBMS
+          ? `<span class="muted" title="${l.srcDocBMS.name}">📄 ${l.srcDocBMS.name.replace(/\.pdf$/i,'').substring(0,22)}…</span>`
+          : '<span class="muted">—</span>');
     const idx = rows.indexOf(l);
     const typeInfo = missionTypes.find(t => t.label === l.mission)
                   || (l.mission && l.missionColor ? { label: l.mission, color: l.missionColor, bg: l.missionColor+'22' } : null);
@@ -1379,7 +1385,7 @@ function renderTabMissions() {
       <td class="td-date">${l.fin||'—'}</td>
       <td class="td-jours">${l.joursTheo||'—'}</td>
       <td class="td-jours" style="color:var(--kaki-mid)">${l.joursReels||'—'}</td>
-      <td><span class="${ec}">${l.ecart||'—'}</span></td>
+      <td>${ecartHtml}</td>
       <td><span class="statut ${sC[st]}">${sL[st]}</span></td>
       <td class="td-date muted" style="white-space:nowrap">
         ${l.ref||'—'}
