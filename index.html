@@ -765,6 +765,8 @@ async function chargerDepuisSheets() {
         obj.statut     = parseInt(obj.statut)   || 1;
         obj.isaoOnly   = obj.isaoOnly === 'true';
         obj.id         = obj.id || Date.now() + Math.random();
+        try { if (obj.srcDoc    && obj.srcDoc[0]    === '{') obj.srcDoc    = JSON.parse(obj.srcDoc);    } catch(e) { obj.srcDoc    = null; }
+        try { if (obj.srcDocBMS && obj.srcDocBMS[0] === '{') obj.srcDocBMS = JSON.parse(obj.srcDocBMS); } catch(e) { obj.srcDocBMS = null; }
         state[annee].rows.push(obj);
       });
     }
@@ -795,11 +797,16 @@ async function sauvegarderSheets() {
     localStorage.setItem('reserveBMS',  JSON.stringify(bmsState));
     return;
   }
-  const headers = ['id','mission','deb','fin','joursTheo','joursReels','dateValid','ecart','statut','solde','isao','isaoOnly','bmsMois','bmsAnnee','code','ref'];
+  const headers = ['id','mission','deb','fin','joursTheo','joursReels','dateValid','ecart','statut','solde','isao','isaoOnly','bmsMois','bmsAnnee','code','ref','missionColor','srcDoc','srcDocBMS'];
   const rows = [headers];
   Object.entries(state).forEach(([, anneeData]) => {
     const lignes = anneeData?.rows || anneeData || [];
-    lignes.forEach(l => rows.push(headers.map(h => l[h] ?? '')));
+    lignes.forEach(l => rows.push(headers.map(h => {
+      const v = l[h];
+      if (v === null || v === undefined) return '';
+      if (typeof v === 'object') return JSON.stringify(v);
+      return v;
+    })));
   });
   const bmsCols = ['mois','annee','net','alloc'];
   const bmsRows = [bmsCols];
