@@ -1294,10 +1294,8 @@ function renderTabPaiements() {
   const totalAllocNet  = Math.round(totalAllocBrut * 0.9047 * 100) / 100;
   const nbMois         = Math.round(totalAllocBrut / 100);
 
-  document.getElementById('pIsao').textContent   = eur(totalISAO);
-  document.getElementById('pSolde').textContent  = eur(totalBrut);
-  document.getElementById('pSoldeSub').textContent = `${eur(totalSolde)} solde + ${eur(totalISAO)} ISAO + ${eur(totalAllocBrut)} alloc`;
-  document.getElementById('pEtud').textContent   = eur(totalAllocNet);
+  document.getElementById('pIsao').textContent    = eur(totalISAO);
+  document.getElementById('pEtud').textContent    = eur(totalAllocNet);
   document.getElementById('pEtudSub').textContent = nbMois > 0 ? `${nbMois} mois × 90,47 € net` : '0 mois';
 
   // Détail ISAO : liste des missions avec prime terrain
