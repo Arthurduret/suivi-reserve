@@ -1098,25 +1098,25 @@ function renderTabMissions() {
     ? '<span class="badge b-ok">🟢 ÉLIGIBLE</span>'
     : `<span class="badge b-warn">${37 - joursScol}j restants</span>`;
 
-  // Prorata prime étudiante
-  const bmsScol  = getBMS(anneeActive);
-  const allocNet = bmsScol.reduce((s,b) => s + (b.alloc||0) * 0.9047, 0);
-  if (joursScol >= 37 || allocNet === 0) {
+  // Prorata prime étudiante (calcul sur le BRUT)
+  const bmsScol    = getBMS(anneeActive);
+  const allocBrut  = bmsScol.reduce((s,b) => s + (b.alloc||0), 0);
+  if (joursScol >= 37 || allocBrut === 0) {
     document.getElementById('prorataWrap').style.display = 'none';
-    if (allocNet > 0) {
+    if (allocBrut > 0) {
       document.getElementById('primeOkWrap').style.display = '';
-      document.getElementById('primeOkDetail').textContent = `${eur(allocNet)} reçus — seuil ${joursScol}/37j atteint ✓`;
+      document.getElementById('primeOkDetail').textContent = `${eur(allocBrut)} brut reçus — seuil ${joursScol}/37j atteint ✓`;
     } else {
       document.getElementById('primeOkWrap').style.display = 'none';
     }
   } else {
     document.getElementById('primeOkWrap').style.display = 'none';
     document.getElementById('prorataWrap').style.display = '';
-    const primeDue    = Math.round(joursScol / 37 * allocNet * 100) / 100;
-    const aRembourser = Math.round((allocNet - primeDue) * 100) / 100;
+    const primeDueBrut    = Math.round(joursScol / 37 * allocBrut * 100) / 100;
+    const aRembourserBrut = Math.round((allocBrut - primeDueBrut) * 100) / 100;
     document.getElementById('prorataDetail').textContent =
-      `${joursScol}j / 37j requis — ${eur(allocNet)} reçus — prime acquise : ${eur(primeDue)}`;
-    document.getElementById('prorataVal').textContent = `À rembourser : ${eur(aRembourser)}`;
+      `${joursScol}j / 37j requis — ${eur(allocBrut)} brut reçus — prime acquise : ${eur(primeDueBrut)} brut`;
+    document.getElementById('prorataVal').textContent = `À rembourser : ${eur(aRembourserBrut)} brut`;
   }
 
   // Alertes
