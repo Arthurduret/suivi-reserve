@@ -760,6 +760,19 @@ function parseBMS(t) {
     else if (lib.includes('ISAO'))                           { if (!missions[key]) missions[key]={deb:d1,fin:d2,solde:0,isao:0}; missions[key].isao  += val; }
     else if (lib.includes('Allocation') && lib.includes('tudes')) { alloc += val; }
   });
+
+  // Fusionner les entrées ISAO-seules dans la mission de base qui chevauche les mêmes dates
+  // L'ISAO est une prime de terrain sur les mêmes jours — pas des jours supplémentaires
+  Object.entries(missions).forEach(([key, m]) => {
+    if (m.solde > 0 || m.isao === 0) return; // déjà une mission complète
+    // Cherche une mission "Solde de base" dont les dates se chevauchent
+    const base = Object.entries(missions).find(([k, bm]) => {
+      if (k === key || bm.solde === 0) return false;
+      return !(ts(m.fin) < ts(bm.deb) || ts(m.deb) > ts(bm.fin));
+    });
+    if (base) { base[1].isao += m.isao; delete missions[key]; }
+  });
+
   // Calcule les jours pour chaque mission depuis les dates
   const missionsAvecJours = Object.values(missions).map(m => {
     const j = calcJours(m.deb, m.fin);
@@ -942,9 +955,16 @@ async function confirmModal() {
       const isao  = parseFloat(document.getElementById(`f_isao_${i}`).value)  || 0;
       const annee = parseInt(m.deb.split('/')[2]);
       const rows  = getRows(annee);
+      const isaoSeulement = (solde === 0 && isao > 0);
       let   idx   = findIdx(rows, m.deb, m.fin);
       if (idx === -1) {
-        rows.push({ id: Date.now(), mission:'', deb:m.deb, fin:m.fin, joursTheo:null, joursReels:null, dateValid:'', ecart:'⚠️ BMS sans convoc', statut:1, code:'', ref:'', solde:0, isao:0, bmsMois:data.mois, bmsAnnee:data.annee });
+        // Si ISAO-seul, cherche une mission existante qui chevauche ces dates
+        if (isaoSeulement) {
+          const overlapIdx = rows.findIndex(r => !(ts(m.fin) < ts(r.deb) || ts(m.deb) > ts(r.fin)));
+          if (overlapIdx !== -1) { rows[overlapIdx].isao += isao; rows[overlapIdx].bmsMois = data.mois; rows[overlapIdx].bmsAnnee = data.annee; rows[overlapIdx].statut = Math.max(rows[overlapIdx].statut||1, 3); setRows(annee, rows); return; }
+        }
+        // Nouvelle ligne — ISAO-seule n'a pas de jours propres
+        rows.push({ id: Date.now(), mission:'', deb:m.deb, fin:m.fin, joursTheo:null, joursReels:null, dateValid:'', ecart: isaoSeulement ? 'ℹ️ Prime terrain (ISAO)' : '⚠️ BMS sans convoc', statut:1, code:'', ref:'', solde:0, isao:0, isaoOnly: isaoSeulement, bmsMois:data.mois, bmsAnnee:data.annee });
         rows.sort((a,b)=>ts(a.deb)-ts(b.deb));
         idx = findIdx(rows, m.deb, m.fin);
       }
@@ -953,15 +973,15 @@ async function confirmModal() {
       rows[idx].bmsMois  = data.mois;
       rows[idx].bmsAnnee = data.annee;
       rows[idx].statut   = Math.max(rows[idx].statut||1, 3);
-      // Jours saisis/validés par l'utilisateur dans la modal
-      const joursInput = parseInt(document.getElementById(`f_jours_${i}`)?.value) || null;
-      if (joursInput) {
-        // L'utilisateur a validé ce nombre — on écrase joursReels
-        rows[idx].joursReels = joursInput;
-      } else if (!rows[idx].joursReels && !rows[idx].joursTheo) {
-        // Fallback calcul automatique
-        const j = calcJours(m.deb, m.fin);
-        if (j) rows[idx].joursReels = j;
+      // Jours : ISAO-seul ne compte pas ses propres jours (déjà comptés dans la mission de base)
+      if (!isaoSeulement) {
+        const joursInput = parseInt(document.getElementById(`f_jours_${i}`)?.value) || null;
+        if (joursInput) {
+          rows[idx].joursReels = joursInput;
+        } else if (!rows[idx].joursReels && !rows[idx].joursTheo) {
+          const j = calcJours(m.deb, m.fin);
+          if (j) rows[idx].joursReels = j;
+        }
       }
       setRows(annee, rows);
     });
@@ -1097,8 +1117,8 @@ function renderKPI() {
   const rows  = getRows(anneeActive);
   const bms   = getBMS(anneeActive);
 
-  // Jours effectués : jours réels si ASF reçu, sinon théoriques
-  const jours = rows.reduce((s,l) => s + (l.joursReels || l.joursTheo || 0), 0);
+  // Jours effectués : ISAO-seul exclus (prime terrain = mêmes jours que la mission de base)
+  const jours = rows.reduce((s,l) => l.isaoOnly ? s : s + (l.joursReels || l.joursTheo || 0), 0);
   const pct   = Math.min(jours/37*100, 100);
   document.getElementById('kJours').textContent  = jours;
   document.getElementById('kFidVal').textContent = jours+'/37';
@@ -1171,9 +1191,9 @@ function renderTableau() {
   const emp  = document.getElementById('emptyState');
   if (!rows.length) { tbody.innerHTML=''; emp.style.display='block'; tfoot.style.display='none'; return; }
   emp.style.display='none';
-  // Totaux
-  const totJT = rows.reduce((s,l) => s + (l.joursTheo||0), 0);
-  const totJR = rows.reduce((s,l) => s + (l.joursReels||0), 0);
+  // Totaux — ISAO-seul exclu du comptage jours
+  const totJT = rows.reduce((s,l) => l.isaoOnly ? s : s + (l.joursTheo||0), 0);
+  const totJR = rows.reduce((s,l) => l.isaoOnly ? s : s + (l.joursReels||0), 0);
   const totSolde = rows.reduce((s,l) => s + (l.solde||0), 0);
   const totISAO  = rows.reduce((s,l) => s + (l.isao||0), 0);
   document.getElementById('ftJTheo').textContent  = totJT  || '—';
