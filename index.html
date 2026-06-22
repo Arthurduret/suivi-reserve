@@ -1036,7 +1036,7 @@ function rafraichir() {
 function renderAnnees() {
   const cur   = new Date().getFullYear();
   const found = Object.keys(state).map(Number);
-  const all   = [...new Set([cur, anneeActive, ...found])].sort((a,b) => b-a);
+  const all   = [...new Set([cur, cur-1, cur-2, cur-3, anneeActive, ...found])].sort((a,b) => b-a);
   document.getElementById('annees').innerHTML = all.map(a =>
     `<button class="btn-annee${a===anneeActive?' active':''}" onclick="changerAnnee(${a})">${a}</button>`
   ).join('');
