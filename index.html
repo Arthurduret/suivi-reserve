@@ -967,22 +967,24 @@ async function onFile(input, typeHint) {
       if (driveId) toast(`📁 Sauvegardé → ${DRIVE_FOLDER}/${docAnnee}/${type}/`, 'tok');
     }
     // Tracker le document
-    docsState.push({ name: file.name, type, date: new Date().toLocaleDateString('fr-FR'), driveId, annee: docAnnee });
+    const docEntry = { name: file.name, type, date: new Date().toLocaleDateString('fr-FR'), driveId, annee: docAnnee };
+    docsState.push(docEntry);
     localStorage.setItem('reserveDocs', JSON.stringify(docsState));
     renderTabDocuments();
 
-    if      (type === 'CONVOCATION') ouvrirConv(parseConv(texte));
-    else if (type === 'ASF')         ouvrirASF(parseASF(texte));
-    else if (type === 'BMS')         ouvrirBMS(parseBMS(texte));
+    const srcDoc = { name: file.name, driveId };
+    if      (type === 'CONVOCATION') ouvrirConv(parseConv(texte), srcDoc);
+    else if (type === 'ASF')         ouvrirASF(parseASF(texte), srcDoc);
+    else if (type === 'BMS')         ouvrirBMS(parseBMS(texte), srcDoc);
   } catch(e) { hideProc(); toast('❌ Erreur : ' + e.message, 'terr'); }
 }
 
 // ════════════════════════════════════════════════════════════
 //  MODALS
 // ════════════════════════════════════════════════════════════
-function ouvrirConv(d) {
+function ouvrirConv(d, srcDoc) {
   if (!d) { toast('❌ Données convocation introuvables', 'terr'); return; }
-  modalPending = { type: 'CONV', data: d };
+  modalPending = { type: 'CONV', data: d, srcDoc };
   document.getElementById('mTitle').textContent = '📋 Convocation détectée';
   document.getElementById('mSub').textContent   = 'Vérifiez et corrigez si nécessaire avant d\'enregistrer.';
   document.getElementById('mFields').innerHTML  = `
@@ -997,7 +999,7 @@ function ouvrirConv(d) {
   document.getElementById('overlay').classList.add('show');
 }
 
-function ouvrirASF(d) {
+function ouvrirASF(d, srcDoc) {
   if (!d) { toast('❌ Données ASF introuvables', 'terr'); return; }
   const annee = parseInt(d.deb.split('/')[2]);
   const rows  = getRows(annee);
@@ -1010,7 +1012,7 @@ function ouvrirASF(d) {
     else if (diff > 0) alertHTML = `<div style="margin-top:6px;padding:4px 10px;background:var(--bleu-pale);color:var(--bleu);border-radius:4px;font-size:12px;display:inline-block">ℹ️ ${jt}j convoc vs ${d.joursReels}j ASF (+${diff}j)</div>`;
     else               alertHTML = `<div style="margin-top:6px;padding:4px 10px;background:var(--vert-pale);color:var(--vert);border-radius:4px;font-size:12px;display:inline-block">✅ ${d.joursReels}j confirmés</div>`;
   }
-  modalPending = { type: 'ASF', data: d };
+  modalPending = { type: 'ASF', data: d, srcDoc };
   document.getElementById('mTitle').textContent = '✅ État de Service Fait';
   document.getElementById('mSub').textContent   = idx !== -1 ? '📎 Convocation trouvée — mise à jour de la ligne.' : '⚠️ Aucune convocation pour ces dates — nouvelle ligne créée.';
   document.getElementById('mFields').innerHTML  = `
@@ -1023,8 +1025,8 @@ function ouvrirASF(d) {
   document.getElementById('overlay').classList.add('show');
 }
 
-function ouvrirBMS(d) {
-  modalPending = { type: 'BMS', data: d };
+function ouvrirBMS(d, srcDoc) {
+  modalPending = { type: 'BMS', data: d, srcDoc };
   let missHTML = '';
   d.missions.forEach((m, i) => {
     const joursAuto = m.joursCalc || calcJours(m.deb, m.fin) || '';
@@ -1069,7 +1071,7 @@ function closeModal() { document.getElementById('overlay').classList.remove('sho
 
 async function confirmModal() {
   if (!modalPending) return;
-  const { type, data } = modalPending;
+  const { type, data, srcDoc } = modalPending;
 
   if (type === 'CONV') {
     const deb = if2(document.getElementById('f_deb').value);
@@ -1082,8 +1084,8 @@ async function confirmModal() {
     const mission   = document.getElementById('f_mission').value.trim();
     const code      = document.getElementById('f_code').value.trim();
     const ref       = document.getElementById('f_ref').value.trim();
-    if (idx !== -1) { if (joursTheo) rows[idx].joursTheo = joursTheo; if (mission) rows[idx].mission = mission; rows[idx].code = code; rows[idx].ref = ref; }
-    else { rows.push({ id: Date.now(), mission, deb, fin, joursTheo, joursReels: null, dateValid: '', ecart: '', statut: 1, code, ref, solde: 0, isao: 0 }); rows.sort((a,b) => ts(a.deb)-ts(b.deb)); }
+    if (idx !== -1) { if (joursTheo) rows[idx].joursTheo = joursTheo; if (mission) rows[idx].mission = mission; rows[idx].code = code; rows[idx].ref = ref; if (srcDoc) rows[idx].srcDoc = srcDoc; }
+    else { rows.push({ id: Date.now(), mission, deb, fin, joursTheo, joursReels: null, dateValid: '', ecart: '', statut: 1, code, ref, solde: 0, isao: 0, srcDoc: srcDoc||null }); rows.sort((a,b) => ts(a.deb)-ts(b.deb)); }
     setRows(annee, rows);
     anneeActive = annee;
 
@@ -1098,6 +1100,7 @@ async function confirmModal() {
     if (idx === -1) { rows.push({ id: Date.now(), mission:'', deb, fin, joursTheo:null, joursReels:null, dateValid:'', ecart:'', statut:1, code:'', ref:'', solde:0, isao:0 }); rows.sort((a,b)=>ts(a.deb)-ts(b.deb)); idx = findIdx(rows, deb, fin); }
     const l = rows[idx];
     l.joursReels = joursReels; l.dateValid = dateValid; l.statut = Math.max(l.statut||1, 2);
+    if (srcDoc) l.srcDoc = srcDoc;
     if (l.joursTheo && joursReels !== null) {
       const d = joursReels - l.joursTheo;
       l.ecart = d < 0 ? `⚠️ ${l.joursTheo}j convoc vs ${joursReels}j ASF (${d}j)` : d > 0 ? `ℹ️ ${l.joursTheo}j convoc vs ${joursReels}j ASF (+${d}j)` : `✅ ${joursReels}j confirmés`;
@@ -1133,6 +1136,7 @@ async function confirmModal() {
       rows[idx].bmsMois   = data.mois;
       rows[idx].bmsAnnee  = data.annee;
       rows[idx].statut    = Math.max(rows[idx].statut||1, 3);
+      if (srcDoc) rows[idx].srcDocBMS = srcDoc;
       if (!isaoSeulement) {
         const joursInput = parseInt(document.getElementById(`f_jours_${i}`)?.value) || null;
         if (joursInput) {
@@ -1371,7 +1375,11 @@ function renderTabMissions() {
       <td class="td-jours" style="color:var(--kaki-mid)">${l.joursReels||'—'}</td>
       <td><span class="${ec}">${l.ecart||'—'}</span></td>
       <td><span class="statut ${sC[st]}">${sL[st]}</span></td>
-      <td class="td-date muted">${l.ref||'—'}</td>
+      <td class="td-date muted" style="white-space:nowrap">
+        ${l.ref||'—'}
+        ${l.srcDoc?.driveId ? `<a href="https://drive.google.com/file/d/${l.srcDoc.driveId}/view" target="_blank" title="${l.srcDoc.name}" style="margin-left:5px;text-decoration:none;font-size:13px">📄</a>` : ''}
+        ${l.srcDocBMS?.driveId ? `<a href="https://drive.google.com/file/d/${l.srcDocBMS.driveId}/view" target="_blank" title="${l.srcDocBMS.name}" style="margin-left:2px;text-decoration:none;font-size:13px">💰</a>` : ''}
+      </td>
       <td><button class="btn-sm btn-del" onclick="delRow(${anneeActive},${idx})">✕</button></td>
     </tr>${isaoRow}`;
   }).join('');
