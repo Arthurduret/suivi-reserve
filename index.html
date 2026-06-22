@@ -944,9 +944,9 @@ function ouvrirBMS(d) {
         <div style="font-size:11px;font-weight:700;color:var(--kaki);margin-bottom:8px">MISSION ${i+1} — ${m.deb} → ${m.fin}</div>
         <div class="frow">
           <div class="fg">
-            <label>Jours effectués ✏️</label>
+            <label>✅ Jours effectués (confirmation de service)</label>
             <input type="number" id="f_jours_${i}" value="${joursAuto}" min="1" max="365" style="font-weight:700;font-size:16px;border-color:var(--kaki-light)">
-            <span style="font-size:11px;color:var(--doux);margin-top:2px">Calculé : ${joursAuto}j — corrigez si besoin</span>
+            <span style="font-size:11px;color:var(--doux);margin-top:2px">Calculé : ${joursAuto}j — corrigez si besoin. Sans ASF, cette valeur fait foi.</span>
           </div>
           <div class="fg"><label>Solde Base ENSAP (€)</label><input type="number" id="f_solde_${i}" value="${m.solde||''}" step="0.01"></div>
         </div>
@@ -957,7 +957,7 @@ function ouvrirBMS(d) {
       </div>`;
   });
   document.getElementById('mTitle').textContent = `💰 BMS ${d.mois} ${d.annee}`;
-  document.getElementById('mSub').textContent   = `${d.missions.length} mission(s) — vérifiez les montants détectés automatiquement.`;
+  document.getElementById('mSub').textContent   = `${d.missions.length} mission(s) — confirmez les jours effectués (remplace l'ASF si vous n'en avez pas).`;
   document.getElementById('mFields').innerHTML  = missHTML + `
     <hr style="border:none;border-top:1px solid var(--bord);margin:4px 0 12px">
     <div class="frow">
@@ -1039,8 +1039,16 @@ async function confirmModal() {
       rows[idx].statut    = Math.max(rows[idx].statut||1, 3);
       if (!isaoSeulement) {
         const joursInput = parseInt(document.getElementById(`f_jours_${i}`)?.value) || null;
-        if (joursInput) rows[idx].joursReels = joursInput;
-        else if (!rows[idx].joursReels && !rows[idx].joursTheo) { const j = calcJours(m.deb, m.fin); if (j) rows[idx].joursReels = j; }
+        if (joursInput) {
+          rows[idx].joursReels = joursInput;
+          // Si pas d'ASF, la confirmation des jours via BMS vaut validation de service
+          if (!rows[idx].dateValid) {
+            rows[idx].dateValid = new Date().toLocaleDateString('fr-FR').split('/').reverse().join('/');
+            rows[idx].ecart = `✅ ${joursInput}j confirmés via BMS`;
+          }
+        } else if (!rows[idx].joursReels && !rows[idx].joursTheo) {
+          const j = calcJours(m.deb, m.fin); if (j) rows[idx].joursReels = j;
+        }
       }
       setRows(annee, rows);
     });
