@@ -176,6 +176,25 @@
   .empty-icon  { font-size: 40px; margin-bottom: 12px; }
   .empty-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
 
+  /* ALERTES */
+  .alertes-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .alerte { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--r); font-size: 13px; }
+  .alerte-err  { background: var(--rouge-pale); border-left: 4px solid var(--rouge); color: #7A1A1A; }
+  .alerte-warn { background: var(--ora-pale);   border-left: 4px solid var(--orange); color: #7A3A00; }
+  .alerte-info { background: var(--bleu-pale);  border-left: 4px solid var(--bleu);  color: #0A2A4A; }
+  .alerte-ok   { background: var(--vert-pale);  border-left: 4px solid var(--vert);  color: #0A3A1A; }
+  .alerte b { font-weight: 700; }
+
+  /* TFOOT */
+  tfoot tr { background: var(--kaki-pale); font-weight: 700; border-top: 2px solid var(--bord); }
+  tfoot td { padding: 10px 14px; font-size: 13px; }
+
+  /* SAVE STATUS */
+  .save-indicator { font-size: 11px; padding: 3px 8px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; }
+  .save-indicator.visible { opacity: 1; }
+  .si-ok   { background: rgba(255,255,255,0.2); color: white; }
+  .si-err  { background: var(--rouge); color: white; }
+
   /* TOAST */
   .toast { position: fixed; bottom: 24px; right: 24px; background: var(--kaki); color: white; padding: 14px 20px; border-radius: var(--r); font-size: 14px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.2); transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 300; max-width: 340px; }
   .toast.show { transform: translateY(0); opacity: 1; }
@@ -222,6 +241,7 @@
   </div>
   <div class="h-right">
     <div class="annees" id="annees"></div>
+    <span class="save-indicator" id="saveIndicator"></span>
     <div id="authArea">
       <button class="btn-google" onclick="signIn()">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
@@ -249,9 +269,14 @@
     <!-- KPI -->
     <div class="kpi-grid">
       <div class="kpi">
-        <div class="kpi-label">Jours effectués</div>
+        <div class="kpi-label">Jours — Année civile</div>
         <div class="kpi-val" id="kJours">0</div>
-        <div class="kpi-sub">année en cours</div>
+        <div class="kpi-sub" id="kJoursSub">janv. → déc.</div>
+      </div>
+      <div class="kpi" style="border-left-color:var(--bleu)">
+        <div class="kpi-label">Jours — Année scolaire</div>
+        <div class="kpi-val" id="kJoursScol">0</div>
+        <div class="kpi-sub" id="kJoursScolSub">sept. → août</div>
       </div>
       <div class="kpi kf">
         <div class="kpi-label">Prime FIDERES</div>
@@ -326,23 +351,47 @@
       <div id="driveStatus"></div>
     </div>
 
+    <!-- ALERTES PAIEMENT -->
+    <div class="table-wrap-outer" id="alertesWrap" style="display:none">
+      <div class="table-hdr">
+        <h2>⚠️ Alertes</h2>
+      </div>
+      <div style="padding:16px 20px">
+        <div class="alertes-wrap" id="alertesContent"></div>
+      </div>
+    </div>
+
     <!-- TABLEAU -->
     <div class="table-wrap-outer">
       <div class="table-hdr">
         <h2>📅 Activités <span id="anneeLabel" style="color:var(--doux);font-weight:400;font-size:13px"></span></h2>
-        <button class="btn btn-s btn-sm" onclick="ajouterManuel()" style="font-size:12px;padding:6px 12px">+ Ajouter</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-s btn-sm" onclick="exportCSV()" style="font-size:12px;padding:6px 12px">⬇️ Export CSV</button>
+          <button class="btn btn-s btn-sm" onclick="ajouterManuel()" style="font-size:12px;padding:6px 12px">+ Ajouter</button>
+        </div>
       </div>
       <div class="table-scroll">
         <table>
           <thead>
             <tr>
-              <th>Mission</th><th>Début</th><th>Fin</th>
+              <th>Mission</th><th style="cursor:pointer" onclick="sortTable('deb')">Début ↕</th><th>Fin</th>
               <th>J.Théo</th><th>J.Réels</th><th>Écart</th>
-              <th>Statut</th><th>Solde Brute ENSAP</th><th>ISAO Brut</th>
+              <th style="cursor:pointer" onclick="sortTable('statut')">Statut ↕</th><th>Solde Brute ENSAP</th><th>ISAO Brut</th>
               <th>BMS lié</th><th>Vérif. Paye</th><th></th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
+          <tfoot id="tfoot" style="display:none">
+            <tr>
+              <td colspan="3">TOTAL</td>
+              <td class="td-jours" id="ftJTheo">—</td>
+              <td class="td-jours" id="ftJReels">—</td>
+              <td colspan="2"></td>
+              <td class="td-mont" id="ftSolde">—</td>
+              <td class="td-mont" id="ftISAO">—</td>
+              <td colspan="3"></td>
+            </tr>
+          </tfoot>
         </table>
         <div class="empty" id="emptyState" style="display:none">
           <div class="empty-icon">🪖</div>
@@ -612,8 +661,22 @@ async function gFetch(url, opts = {}) {
     ...opts,
     headers: { Authorization: 'Bearer ' + accessToken, ...(opts.headers || {}) }
   });
-  if (!r.ok) { const e = await r.json(); throw new Error(JSON.stringify(e)); }
+  if (!r.ok) {
+    let e = {};
+    try { e = await r.json(); } catch(_) {}
+    if (r.status === 401) { accessToken = null; localStorage.removeItem('gat'); localStorage.removeItem('gat_exp'); toast('🔑 Session expirée — reconnectez-vous', 'terr'); }
+    throw new Error(e.error?.message || `HTTP ${r.status}`);
+  }
   return r.json();
+}
+
+function setSaveStatus(ok, msg) {
+  const el = document.getElementById('saveIndicator');
+  if (!el) return;
+  el.textContent = ok ? '✓ ' + msg : '✗ ' + msg;
+  el.className = 'save-indicator visible ' + (ok ? 'si-ok' : 'si-err');
+  clearTimeout(el._t);
+  if (ok) el._t = setTimeout(() => el.classList.remove('visible'), 3000);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -641,9 +704,10 @@ async function extraireTexte(file) {
 }
 
 function detectType(t) {
-  if (t.includes('BULLETIN MENSUEL DE SOLDE') || t.includes('NET A PAYER')) return 'BMS';
-  if ((t.includes('ETAT NOMINATIF') || t.includes('ÉTAT NOMINATIF')) && t.includes('solder')) return 'ASF';
-  if (t.includes('ORDRE DE CONVOCATION') || (t.includes('RESERVE OPERATIONNELLE') && t.includes('convoqu'))) return 'CONVOCATION';
+  if (t.includes('BULLETIN MENSUEL DE SOLDE') || t.includes('NET A PAYER') || t.includes('NET À PAYER')) return 'BMS';
+  const tl = t.toLowerCase();
+  if ((t.includes('ETAT NOMINATIF') || t.includes('ÉTAT NOMINATIF') || t.includes('SERVICE FAIT')) && tl.includes('solder')) return 'ASF';
+  if (t.includes('ORDRE DE CONVOCATION') || (t.includes('RESERVE OPERATIONNELLE') && tl.includes('convoqu'))) return 'CONVOCATION';
   return 'INCONNU';
 }
 
@@ -665,8 +729,11 @@ function parseASF(t) {
 }
 
 function parseBMS(t) {
-  const mm = t.match(/BULLETIN\s+MENSUEL\s+DE\s+SOLDE\s*:\s*([A-ZÉÛÀa-zéûà]+)/i);
-  const ma = t.match(/[Pp][ée]riode\s+du\s+\d{2}\/\d{2}\/(\d{4})/);
+  // Extraction mois : "BMS : JANVIER" ou "Période du 01/01/2025" ou "JANVIER 2025"
+  const mm = t.match(/BULLETIN\s+MENSUEL\s+DE\s+SOLDE\s*[:\-]?\s*([A-ZÉÛÀA-zéûà]+)/i)
+           || t.match(/SOLDE\s+(?:DU\s+MOIS\s+D['E]?\s*)?([A-ZÉÛÀA-zéûà]{3,})/i);
+  const ma = t.match(/[Pp][ée]riode\s+du\s+\d{2}\/\d{2}\/(\d{4})/)
+           || t.match(/\b(20\d{2})\b/);
   // Stratégie robuste pour extraire le NET À PAYER
   // PDF.js peut placer le montant AVANT ou APRÈS la ligne "NET A PAYER"
   // selon l'ordre de reconstruction des éléments du tableau PDF
@@ -698,12 +765,25 @@ function parseBMS(t) {
     else if (lib.includes('ISAO'))                           { if (!missions[key]) missions[key]={deb:d1,fin:d2,solde:0,isao:0}; missions[key].isao  += val; }
     else if (lib.includes('Allocation') && lib.includes('tudes')) { alloc += val; }
   });
+
+  // Fusionner les entrées ISAO-seules dans la mission de base qui chevauche les mêmes dates
+  // L'ISAO est une prime de terrain sur les mêmes jours — pas des jours supplémentaires
+  Object.entries(missions).forEach(([key, m]) => {
+    if (m.solde > 0 || m.isao === 0) return; // déjà une mission complète
+    // Cherche une mission "Solde de base" dont les dates se chevauchent
+    const base = Object.entries(missions).find(([k, bm]) => {
+      if (k === key || bm.solde === 0) return false;
+      return !(ts(m.fin) < ts(bm.deb) || ts(m.deb) > ts(bm.fin));
+    });
+    if (base) { base[1].isao += m.isao; delete missions[key]; }
+  });
+
   // Calcule les jours pour chaque mission depuis les dates
   const missionsAvecJours = Object.values(missions).map(m => {
     const j = calcJours(m.deb, m.fin);
     return { ...m, joursCalc: j };
   });
-  return { mois: mm?mm[1].toUpperCase():'', annee: ma?parseInt(ma[1]):new Date().getFullYear(), net: mn?parseFloat(mn[1].replace(/\s/g,'').replace(',','.')):0, alloc, missions: missionsAvecJours };
+  return { mois: mm?mm[1].toUpperCase():'INCONNU', annee: ma?parseInt(ma[1]):new Date().getFullYear(), net: mn?parseFloat(mn[1].replace(/[\s ]/g,'').replace(',','.')):0, alloc, missions: missionsAvecJours };
 }
 
 // ════════════════════════════════════════════════════════════
@@ -880,9 +960,16 @@ async function confirmModal() {
       const isao  = parseFloat(document.getElementById(`f_isao_${i}`).value)  || 0;
       const annee = parseInt(m.deb.split('/')[2]);
       const rows  = getRows(annee);
+      const isaoSeulement = (solde === 0 && isao > 0);
       let   idx   = findIdx(rows, m.deb, m.fin);
       if (idx === -1) {
-        rows.push({ id: Date.now(), mission:'', deb:m.deb, fin:m.fin, joursTheo:null, joursReels:null, dateValid:'', ecart:'⚠️ BMS sans convoc', statut:1, code:'', ref:'', solde:0, isao:0, bmsMois:data.mois, bmsAnnee:data.annee });
+        // Si ISAO-seul, cherche une mission existante qui chevauche ces dates
+        if (isaoSeulement) {
+          const overlapIdx = rows.findIndex(r => !(ts(m.fin) < ts(r.deb) || ts(m.deb) > ts(r.fin)));
+          if (overlapIdx !== -1) { rows[overlapIdx].isao += isao; rows[overlapIdx].bmsMois = data.mois; rows[overlapIdx].bmsAnnee = data.annee; rows[overlapIdx].statut = Math.max(rows[overlapIdx].statut||1, 3); setRows(annee, rows); return; }
+        }
+        // Nouvelle ligne — ISAO-seule n'a pas de jours propres
+        rows.push({ id: Date.now(), mission:'', deb:m.deb, fin:m.fin, joursTheo:null, joursReels:null, dateValid:'', ecart: isaoSeulement ? 'ℹ️ Prime terrain (ISAO)' : '⚠️ BMS sans convoc', statut:1, code:'', ref:'', solde:0, isao:0, isaoOnly: isaoSeulement, bmsMois:data.mois, bmsAnnee:data.annee });
         rows.sort((a,b)=>ts(a.deb)-ts(b.deb));
         idx = findIdx(rows, m.deb, m.fin);
       }
@@ -891,15 +978,15 @@ async function confirmModal() {
       rows[idx].bmsMois  = data.mois;
       rows[idx].bmsAnnee = data.annee;
       rows[idx].statut   = Math.max(rows[idx].statut||1, 3);
-      // Jours saisis/validés par l'utilisateur dans la modal
-      const joursInput = parseInt(document.getElementById(`f_jours_${i}`)?.value) || null;
-      if (joursInput) {
-        // L'utilisateur a validé ce nombre — on écrase joursReels
-        rows[idx].joursReels = joursInput;
-      } else if (!rows[idx].joursReels && !rows[idx].joursTheo) {
-        // Fallback calcul automatique
-        const j = calcJours(m.deb, m.fin);
-        if (j) rows[idx].joursReels = j;
+      // Jours : ISAO-seul ne compte pas ses propres jours (déjà comptés dans la mission de base)
+      if (!isaoSeulement) {
+        const joursInput = parseInt(document.getElementById(`f_jours_${i}`)?.value) || null;
+        if (joursInput) {
+          rows[idx].joursReels = joursInput;
+        } else if (!rows[idx].joursReels && !rows[idx].joursTheo) {
+          const j = calcJours(m.deb, m.fin);
+          if (j) rows[idx].joursReels = j;
+        }
       }
       setRows(annee, rows);
     });
@@ -916,7 +1003,14 @@ async function confirmModal() {
   closeModal();
   // Sauvegarde Sheets
   showProc('Sauvegarde…');
-  try { await sauvegarderSheets(); } catch(e) { console.warn('Sheets save:', e); }
+  try {
+    await sauvegarderSheets();
+    setSaveStatus(true, 'Sauvegardé');
+  } catch(e) {
+    console.warn('Sheets save:', e);
+    setSaveStatus(false, 'Erreur Drive');
+    toast('⚠️ Sauvegarde Drive échouée — données conservées localement', 'terr');
+  }
   hideProc();
   rafraichir();
   toast('✅ Enregistré', 'tok');
@@ -942,7 +1036,48 @@ function ajouterManuel() {
 // ════════════════════════════════════════════════════════════
 //  RENDU
 // ════════════════════════════════════════════════════════════
-function rafraichir() { renderAnnees(); renderKPI(); renderTableau(); renderBMS(); }
+function rafraichir() { renderAnnees(); renderKPI(); renderAlertes(); renderTableau(); renderBMS(); }
+
+function renderAlertes() {
+  const rows = getRows(anneeActive);
+  const bms  = getBMS(anneeActive);
+  const wrap = document.getElementById('alertesWrap');
+  const cont = document.getElementById('alertesContent');
+  const alertes = [];
+
+  // Missions convoquées sans ASF depuis plus de 30 jours
+  const today = Date.now();
+  rows.forEach(l => {
+    if (l.statut === 1 && l.fin) {
+      const finTs = ts(l.fin);
+      const delta = Math.round((today - finTs) / 86400000);
+      if (delta > 30) {
+        alertes.push({ cls: 'alerte-warn', msg: `<b>${l.mission || (l.deb + ' → ' + l.fin)}</b> — ASF non reçu ${delta}j après la fin de mission` });
+      }
+    }
+    // Mission avec ASF mais sans BMS
+    if (l.statut === 2 && !l.bmsMois && l.fin) {
+      const finTs = ts(l.fin);
+      const delta = Math.round((today - finTs) / 86400000);
+      if (delta > 45) {
+        const montantEst = ((l.joursReels || l.joursTheo || 0) * 60.385).toFixed(2).replace('.', ',');
+        alertes.push({ cls: 'alerte-err', msg: `<b>${l.mission || (l.deb + ' → ' + l.fin)}</b> — Paiement non reçu (ASF validé il y a ${delta}j, ~${montantEst} € attendus)` });
+      }
+    }
+  });
+
+  // Total attendu vs total perçu
+  const totalNet = bms.reduce((s,b) => s + (b.net||0), 0);
+  const totalAtt = rows.filter(l => !l.bmsMois && l.statut >= 1).reduce((s,l) => s + ((l.joursReels||l.joursTheo||0)*60.385), 0);
+
+  if (!alertes.length && totalAtt < 1) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const html = alertes.map(a => `<div class="alerte ${a.cls}">${a.msg}</div>`).join('');
+  const resume = totalAtt > 0
+    ? `<div class="alerte alerte-info">💶 Solde non encore payée estimée : <b>~${eur(totalAtt)}</b> (${rows.filter(l=>!l.bmsMois&&l.statut>=1).length} mission(s))</div>`
+    : '';
+  cont.innerHTML = html + resume;
+}
 
 function renderAnnees() {
   const cur   = new Date().getFullYear();
@@ -983,16 +1118,47 @@ function renderBMS() {
   }).join('');
 }
 
+// Compte les jours d'une liste de lignes qui tombent dans [debLimit, finLimit] (timestamps)
+function joursEnPeriode(lignes, debLimit, finLimit) {
+  return lignes.reduce((s, l) => {
+    if (l.isaoOnly || (!l.deb && !l.fin)) return s;
+    const dTs = ts(l.deb), fTs = ts(l.fin || l.deb);
+    // Intersection entre la mission et la période
+    const start = Math.max(dTs, debLimit);
+    const end   = Math.min(fTs, finLimit);
+    if (end < start) return s;
+    const jours = Math.round((end - start) / 86400000) + 1;
+    // On ne peut compter plus que les jours réels/théo de la ligne
+    const joursLigne = l.joursReels || l.joursTheo || Math.round((fTs - dTs) / 86400000) + 1;
+    return s + Math.min(jours, joursLigne);
+  }, 0);
+}
+
 function renderKPI() {
   const rows  = getRows(anneeActive);
   const bms   = getBMS(anneeActive);
 
-  // Jours effectués : jours réels si ASF reçu, sinon théoriques
-  const jours = rows.reduce((s,l) => s + (l.joursReels || l.joursTheo || 0), 0);
-  const pct   = Math.min(jours/37*100, 100);
-  document.getElementById('kJours').textContent  = jours;
+  // ── Jours année civile (1 jan → 31 déc de l'année active) ────────
+  const debCivile = new Date(anneeActive, 0, 1).getTime();
+  const finCivile = new Date(anneeActive, 11, 31).getTime();
+  const jours = joursEnPeriode(rows, debCivile, finCivile);
+
+  // ── Jours année scolaire (1 sep N-1 → 31 août N) ─────────────────
+  // Ex : si anneeActive = 2025, année scolaire = sept 2024 → août 2025
+  const debScol   = new Date(anneeActive - 1, 8, 1).getTime();  // 1 sept N-1
+  const finScol   = new Date(anneeActive, 7, 31).getTime();     // 31 août N
+  const rowsScol  = [...getRows(anneeActive - 1), ...rows];     // missions des deux années civiles
+  const joursScol = joursEnPeriode(rowsScol, debScol, finScol);
+
+  document.getElementById('kJours').textContent     = jours;
+  document.getElementById('kJoursSub').textContent  = `janv. ${anneeActive} → déc. ${anneeActive}`;
+  document.getElementById('kJoursScol').textContent = joursScol;
+  document.getElementById('kJoursScolSub').textContent = `sept. ${anneeActive-1} → août ${anneeActive}`;
+
+  // FIDERES basé sur l'année civile (critère officiel)
+  const pct = Math.min(jours/37*100, 100);
   document.getElementById('kFidVal').textContent = jours+'/37';
-  document.getElementById('fCount').textContent  = jours+' / 37 jours';
+  document.getElementById('fCount').textContent  = jours+' / 37 jours (année civile)';
   document.getElementById('fFill').style.width   = pct+'%';
   document.getElementById('fFill').className     = 'fideres-fill'+(jours>=37?' done':'');
   document.getElementById('kFidBadge').innerHTML = jours>=37
@@ -1057,9 +1223,20 @@ function renderKPI() {
 function renderTableau() {
   const rows = getRows(anneeActive);
   const tbody= document.getElementById('tbody');
+  const tfoot= document.getElementById('tfoot');
   const emp  = document.getElementById('emptyState');
-  if (!rows.length) { tbody.innerHTML=''; emp.style.display='block'; return; }
+  if (!rows.length) { tbody.innerHTML=''; emp.style.display='block'; tfoot.style.display='none'; return; }
   emp.style.display='none';
+  // Totaux — ISAO-seul exclu du comptage jours
+  const totJT = rows.reduce((s,l) => l.isaoOnly ? s : s + (l.joursTheo||0), 0);
+  const totJR = rows.reduce((s,l) => l.isaoOnly ? s : s + (l.joursReels||0), 0);
+  const totSolde = rows.reduce((s,l) => s + (l.solde||0), 0);
+  const totISAO  = rows.reduce((s,l) => s + (l.isao||0), 0);
+  document.getElementById('ftJTheo').textContent  = totJT  || '—';
+  document.getElementById('ftJReels').textContent = totJR  || '—';
+  document.getElementById('ftSolde').textContent  = totSolde ? eur(totSolde) : '—';
+  document.getElementById('ftISAO').textContent   = totISAO  ? eur(totISAO)  : '—';
+  tfoot.style.display = '';
   const sL = ['','📋 Convoqué','✅ ASF OK','💰 Payé'];
   const sC = ['','s1','s2','s3'];
   tbody.innerHTML = rows.map((l,i) => {
@@ -1096,14 +1273,52 @@ function renderTableau() {
 // ════════════════════════════════════════════════════════════
 async function majMission(annee, idx, val) {
   const rows = getRows(annee); if (rows[idx]) { rows[idx].mission = val; setRows(annee, rows); }
-  try { await sauvegarderSheets(); } catch(e) {}
+  try { await sauvegarderSheets(); setSaveStatus(true, 'Sauvegardé'); } catch(e) { setSaveStatus(false, 'Erreur Drive'); }
 }
 
 async function delRow(annee, idx) {
   if (!confirm('Supprimer cette ligne ?')) return;
   const rows = getRows(annee); rows.splice(idx,1); setRows(annee, rows);
-  try { await sauvegarderSheets(); } catch(e) {}
+  try { await sauvegarderSheets(); setSaveStatus(true, 'Sauvegardé'); } catch(e) { setSaveStatus(false, 'Erreur Drive'); }
   rafraichir(); toast('🗑️ Ligne supprimée', 'tok');
+}
+
+let _sortDir = {};
+function sortTable(col) {
+  const rows = getRows(anneeActive);
+  if (!rows.length) return;
+  _sortDir[col] = !_sortDir[col];
+  rows.sort((a, b) => {
+    let va = a[col], vb = b[col];
+    if (col === 'deb' || col === 'fin') { va = ts(va); vb = ts(vb); }
+    else { va = Number(va)||0; vb = Number(vb)||0; }
+    return _sortDir[col] ? va - vb : vb - va;
+  });
+  setRows(anneeActive, rows);
+  renderTableau();
+}
+
+function exportCSV() {
+  const rows = getRows(anneeActive);
+  if (!rows.length) { toast('Aucune donnée à exporter', 'terr'); return; }
+  const headers = ['Mission','Début','Fin','J.Théoriques','J.Réels','Statut','Écart','Solde Brut ENSAP','ISAO Brut','BMS Mois','BMS Année','Code Activité','Réf OM'];
+  const sL = ['','Convoqué','ASF OK','Payé'];
+  const data = [headers, ...rows.map(l => [
+    l.mission||'', l.deb||'', l.fin||'',
+    l.joursTheo||'', l.joursReels||'',
+    sL[Math.min(l.statut||1,3)]||'',
+    (l.ecart||'').replace(/[^\w\s\-+]/g,''),
+    l.solde||'', l.isao||'',
+    l.bmsMois||'', l.bmsAnnee||'',
+    l.code||'', l.ref||''
+  ])];
+  const csv = data.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `reserve_${anneeActive}.csv`;
+  a.click();
+  toast('⬇️ Export CSV téléchargé', 'tok');
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1219,9 +1434,12 @@ async function init() {
     } catch(e) { console.warn('Init data:', e); }
     hideProc();
 
-    // Fallback localStorage
+    // Fallback localStorage si Sheets vide ou inaccessible
     if (!Object.keys(state).length) {
-      try { state = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
+      try { state    = JSON.parse(localStorage.getItem('reserveData')||'{}'); } catch(e) {}
+    }
+    if (!Object.keys(bmsState).length) {
+      try { bmsState = JSON.parse(localStorage.getItem('reserveBMS') ||'{}'); } catch(e) {}
     }
   } else {
     // Fallback local si pas connecté
